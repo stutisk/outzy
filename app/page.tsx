@@ -80,8 +80,8 @@ export default function Home() {
       </div>
 
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
+      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -91,18 +91,50 @@ export default function Home() {
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold text-slate-900 leading-tight">Outzy</span>
-              <span className="text-[10px] font-medium text-blue-600 -mt-0.5">explore together</span>
+              <span className="text-lg font-bold text-slate-900 leading-tight">
+                Outzy
+              </span>
+              <span className="text-[10px] font-medium text-blue-600 -mt-0.5">
+                explore together
+              </span>
             </div>
           </div>
+          {user && (
+            <div className="hidden md:flex items-center gap-4">
+              <button className="text-sm font-medium text-slate-600 hover:text-blue-600">
+                Discover
+              </button>
 
+              <button className="text-sm font-medium text-slate-600 hover:text-blue-600">
+                Adventures
+              </button>
+
+              <button className="text-sm font-medium text-slate-600 hover:text-blue-600">
+                Community
+              </button>
+
+              <button
+                onClick={() => router.push("/create-activity")}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2"
+              >
+                <span className="text-lg">+</span>
+                Create Activity
+              </button>
+            </div>
+          )}
           {/* Nav Links */}
           {!user && (
             <div className="hidden md:flex items-center gap-6">
-              <a href="#how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              <a
+                href="#how-it-works"
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
                 How it works
               </a>
-              <a href="#why-outzy" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              <a
+                href="#why-outzy"
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
                 Why Outzy
               </a>
               <button
@@ -116,19 +148,52 @@ export default function Home() {
           )}
 
           {user ? (
-            <button
-              onClick={logout}
-              className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-            >
-              Sign out
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                {user.user_metadata.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="profile"
+                    className="w-9 h-9 rounded-full"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                    {user.user_metadata.full_name?.charAt(0)}
+                  </div>
+                )}
+
+                <div className="hidden sm:block">
+                  <p className="text-xs text-slate-500">Welcome back</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Hey, {user.user_metadata.full_name?.split(" ")[0]} 👋
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={logout}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+              >
+                Sign out
+              </button>
+            </div>
           ) : (
             <button
               onClick={login}
               className="md:hidden p-2 bg-slate-900 text-white rounded-lg"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
             </button>
           )}
@@ -160,8 +225,8 @@ export default function Home() {
             {/* Subtext */}
             <p className="text-lg md:text-xl text-slate-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
               Find curated adventures, local experiences, and build genuine{" "}
-              <span className="font-semibold text-slate-900">friendships</span> through
-              exploring the world together.
+              <span className="font-semibold text-slate-900">friendships</span>{" "}
+              through exploring the world together.
             </p>
 
             {/* Key Benefits */}
@@ -183,25 +248,20 @@ export default function Home() {
               ))}
             </div>
 
-            {/* CTA or User Info */}
+            {/* CTA - Different for logged in vs logged out */}
             {user ? (
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                <div className="flex items-center gap-3 bg-white border-2 border-blue-200 px-5 py-3 rounded-2xl shadow-lg">
-                  {user.user_metadata.avatar_url ? (
-                    <img
-                      src={user.user_metadata.avatar_url}
-                      alt={user.user_metadata.full_name}
-                      className="w-10 h-10 rounded-full ring-2 ring-blue-200"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-linear-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white">
-                      👤
-                    </div>
-                  )}
-                  <span className="font-bold text-slate-900">
-                    Hey, {user.user_metadata.full_name?.split(" ")[0]}! 👋
-                  </span>
-                </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                <button
+                  onClick={() => router.push("/create-activity")}
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+                >
+                  <span className="text-xl">✨</span>
+                  Create Activity
+                </button>
+                <button className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 font-bold text-lg rounded-2xl shadow-sm hover:shadow transition-all">
+                  <span className="text-xl">🔍</span>
+                  Discover Activities
+                </button>
               </div>
             ) : (
               <button
@@ -282,7 +342,8 @@ export default function Home() {
           How It Works
         </h2>
         <p className="text-center text-slate-600 mb-12 max-w-xl mx-auto">
-          Finding your adventure tribe is easy. No complicated apps, no endless swiping.
+          Finding your adventure tribe is easy. No complicated apps, no endless
+          swiping.
         </p>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -353,7 +414,10 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
             {[
               { icon: "✓", title: "Real people, verified profiles" },
-              { icon: "✓", title: "Safe locations - landmarks, not exact addresses" },
+              {
+                icon: "✓",
+                title: "Safe locations - landmarks, not exact addresses",
+              },
               { icon: "✓", title: "Small groups - 2 to 8 people max" },
               { icon: "✓", title: "Chats expire after your adventure" },
               { icon: "✓", title: "Rate hosts and attendees" },
@@ -377,23 +441,60 @@ export default function Home() {
           What Can You Join?
         </h2>
         <p className="text-center text-slate-600 mb-12 max-w-xl mx-auto">
-          Literally anything involving real people in the real world. Host your own or join others.
+          Literally anything involving real people in the real world. Host your
+          own or join others.
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { emoji: "🏔️", name: "Hiking", color: "bg-emerald-50 border-emerald-200" },
-            { emoji: "☕", name: "Coffee", color: "bg-amber-50 border-amber-200" },
-            { emoji: "🚴", name: "Cycling", color: "bg-orange-50 border-orange-200" },
+            {
+              emoji: "🏔️",
+              name: "Hiking",
+              color: "bg-emerald-50 border-emerald-200",
+            },
+            {
+              emoji: "☕",
+              name: "Coffee",
+              color: "bg-amber-50 border-amber-200",
+            },
+            {
+              emoji: "🚴",
+              name: "Cycling",
+              color: "bg-orange-50 border-orange-200",
+            },
             { emoji: "🌊", name: "Beaches", color: "bg-sky-50 border-sky-200" },
-            { emoji: "🍜", name: "Food Tours", color: "bg-red-50 border-red-200" },
-            { emoji: "📸", name: "Photo Walks", color: "bg-violet-50 border-violet-200" },
-            { emoji: "🎨", name: "Museums", color: "bg-fuchsia-50 border-fuchsia-200" },
+            {
+              emoji: "🍜",
+              name: "Food Tours",
+              color: "bg-red-50 border-red-200",
+            },
+            {
+              emoji: "📸",
+              name: "Photo Walks",
+              color: "bg-violet-50 border-violet-200",
+            },
+            {
+              emoji: "🎨",
+              name: "Museums",
+              color: "bg-fuchsia-50 border-fuchsia-200",
+            },
             { emoji: "💃", name: "Dance", color: "bg-pink-50 border-pink-200" },
-            { emoji: "🏃", name: "Running", color: "bg-rose-50 border-rose-200" },
-            { emoji: "🎮", name: "Gaming", color: "bg-indigo-50 border-indigo-200" },
+            {
+              emoji: "🏃",
+              name: "Running",
+              color: "bg-rose-50 border-rose-200",
+            },
+            {
+              emoji: "🎮",
+              name: "Gaming",
+              color: "bg-indigo-50 border-indigo-200",
+            },
             { emoji: "🧘", name: "Yoga", color: "bg-teal-50 border-teal-200" },
-            { emoji: "🥂", name: "Nightlife", color: "bg-slate-50 border-slate-200" },
+            {
+              emoji: "🥂",
+              name: "Nightlife",
+              color: "bg-slate-50 border-slate-200",
+            },
           ].map((activity, idx) => (
             <div
               key={idx}
@@ -406,37 +507,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Final CTA */}
-      {!user && (
-        <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-          <div className="bg-linear-to-br from-blue-600 to-indigo-600 rounded-[2.5rem] p-10 md:p-14 text-white shadow-2xl">
-            <h2 className="text-4xl md:text-5xl font-black mb-4">
-              Ready to explore?
-            </h2>
-            <p className="text-lg text-white/90 mb-8 max-w-md mx-auto">
-              Don't explore alone. Join early and be the first to discover
-              amazing adventures in your area.
-            </p>
-            <button
-              onClick={login}
-              disabled={authLoading}
-              className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-blue-600 font-bold text-xl rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {authLoading ? (
-                <div className="w-6 h-6 border-3 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span className="text-2xl">🧭</span>
-                  Join Early Access
-                </>
-              )}
-            </button>
-            <p className="text-white/70 text-sm mt-4">
-              Free • Google sign-in • Takes 30 seconds
-            </p>
-          </div>
-        </div>
-      )}
+     
 
       {/* Footer */}
       <footer className="border-t border-slate-100 py-8">
