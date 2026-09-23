@@ -12,11 +12,15 @@ export default function Home() {
 
   useEffect(() => {
     const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (user) {
+        if (!user) {
+          return;
+        }
+
         setUser(user);
         const { data: profile } = await supabase
           .from("users")
@@ -27,10 +31,13 @@ export default function Home() {
         if (!profile?.username) {
           router.push("/onboarding");
         } else {
-          router.push("/");
+          router.push("/feed");
         }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getUser();
@@ -101,7 +108,10 @@ export default function Home() {
           </div>
           {user && (
             <div className="hidden md:flex items-center gap-4">
-              <button className="text-sm font-medium text-slate-600 hover:text-blue-600">
+              <button
+                onClick={() => router.push("/feed")}
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
                 Discover
               </button>
 
@@ -258,7 +268,10 @@ export default function Home() {
                   <span className="text-xl">✨</span>
                   Create Activity
                 </button>
-                <button className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 font-bold text-lg rounded-2xl shadow-sm hover:shadow transition-all">
+                <button
+                  onClick={() => router.push("/feed")}
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 font-bold text-lg rounded-2xl shadow-sm hover:shadow transition-all"
+                >
                   <span className="text-xl">🔍</span>
                   Discover Activities
                 </button>
@@ -506,8 +519,6 @@ export default function Home() {
           ))}
         </div>
       </div>
-
-     
 
       {/* Footer */}
       <footer className="border-t border-slate-100 py-8">

@@ -16,7 +16,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // Check authentication on mount
+ 
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -38,7 +38,7 @@ export default function OnboardingPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
-    setError("");
+    setError(" ");
   };
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (e) => {
@@ -68,16 +68,23 @@ export default function OnboardingPage() {
         .map((i) => i.trim())
         .filter(Boolean);
 
-      // Update user in users table
-      const { error: dbError } = await supabase
+      // Check if user exists in users table
+      const { data: existingUser } = await supabase
         .from("users")
-        .update({
-          username: formData.username.trim(),
-          bio: formData.bio.trim(),
-          interests: interestsArray,
-          city: formData.city.trim(),
-        })
-        .eq("id", user.id);
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      // Insert or update user
+      const { error: dbError } = await supabase.from("users").upsert({
+        id: user.id,
+        username: formData.username.trim(),
+        bio: formData.bio.trim(),
+        interests: interestsArray,
+        city: formData.city.trim(),
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url,
+      }, { onConflict: "id" });
 
       if (dbError) {
         console.error("DB Error:", dbError);
@@ -130,9 +137,9 @@ export default function OnboardingPage() {
         </div>
       </nav>
 
-      {/* Onboarding Content */}
+     
       <div className="max-w-xl mx-auto px-6 py-12">
-        {/* Progress indicator */}
+  
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-3 h-3 bg-blue-600 rounded-full" />
           <div className="w-8 h-1 bg-blue-300 rounded-full" />
@@ -176,8 +183,9 @@ export default function OnboardingPage() {
 
           {/* Bio */}
           <div>
-            <label htmlFor="bio" className="block text-sm font-semibold text-slate-900 mb-2">
-              About You
+            <label htmlFor=
+            "bio" className="block text-sm font-semibold text-slate-900 mb-2">
+              About You 
             </label>
             <textarea
               id="bio"
