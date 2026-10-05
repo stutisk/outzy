@@ -1,17 +1,248 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf9f7;
+  --foreground: #121826;
+  /* Brand accent (teal) — `coral` Tailwind tokens map here for compatibility */
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --navy: #121826;
+  --highlight: #ffd740;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-coral: var(--accent);
+  --color-coral-hover: var(--accent-hover);
+  --color-navy: var(--navy);
+  --color-highlight: var(--highlight);
+  --color-coral-50: #f0fdfa;
+  --color-coral-100: #ccfbf1;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+input,
+textarea,
+select {
+  color: #121826;
+}
+
+/* Consistent pointer on interactive controls */
+button:not(:disabled),
+a[href],
+label[for],
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+/* Landing: What's the move? */
+.move-section {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgb(120 113 108 / 0.07) 1px, transparent 0),
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgb(13 148 136 / 0.08), transparent),
+    radial-gradient(ellipse 50% 40% at 100% 50%, rgb(16 185 129 / 0.05), transparent);
+  background-size:
+    24px 24px,
+    auto,
+    auto;
+}
+
+/* —— Motion —— */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 40px -12px rgb(13 148 136 / 0.45);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 16px 48px -12px rgb(13 148 136 / 0.55);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+@keyframes hero-visual-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-float {
+  animation: float 4.5s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 5.5s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 48s linear infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.animate-hero-visual {
+  animation: hero-visual-in 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.stagger-1 {
+  animation-delay: 0.08s;
+}
+.stagger-2 {
+  animation-delay: 0.16s;
+}
+.stagger-3 {
+  animation-delay: 0.24s;
+}
+.stagger-4 {
+  animation-delay: 0.32s;
+}
+.stagger-5 {
+  animation-delay: 0.4s;
+}
+
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal-on-scroll[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing-mesh {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgb(13 148 136 / 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgb(16 185 129 / 0.08), transparent);
+}
+
+.card-lift {
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -24px rgb(18 24 38 / 0.2);
+}
+
+.pill-interactive {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pill-interactive:hover {
+  transform: translateY(-2px);
+}
+
+.pill-interactive:active {
+  transform: translateY(0) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-float,
+  .animate-float-slow,
+  .animate-spin-slow,
+  .animate-pulse-soft,
+  .animate-hero-visual {
+    animation: none;
+  }
+
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .reveal-on-scroll[data-visible="false"] {
+    opacity: 1;
+  }
+
+  .card-lift:hover,
+  .pill-interactive:hover {
+    transform: none;
+  }
 }

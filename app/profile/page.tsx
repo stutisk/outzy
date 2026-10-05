@@ -2,6 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { ActivityCard } from "@/components/activity-card";
+import { Spinner } from "@/components/spinner";
 import { supabase } from "@/lib/supabase";
 
 interface UserProfile {
@@ -15,34 +18,34 @@ interface UserProfile {
   created_at: string;
 }
 
-interface Activity {
+interface ProfileActivity {
   id: string;
   title: string;
+  description: string;
   activity_date: string;
   category: string;
   city: string;
+  max_people: number;
+  user_id: string;
+  created_at: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  hiking: "🏔️ Hiking",
-  coffee: "☕ Coffee",
-  cycling: "🚴 Cycling",
-  beaches: "🌊 Beaches",
-  food: "🍜 Food Tours",
-  photography: "📸 Photography",
-  art: "🎨 Art & Culture",
-  dance: "💃 Music & Dance",
-  running: "🏃 Running",
-  gaming: "🎮 Gaming",
-  yoga: "🧘 Yoga",
-  nightlife: "🥂 Nightlife",
-};
+function isUpcoming(dateStr: string) {
+  return new Date(dateStr) > new Date();
+}
+
+function formatMemberSince(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 function ProfileContent() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<ProfileActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [viewingOwn, setViewingOwn] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,33 +56,30 @@ function ProfileContent() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      setCurrentUser(user);
 
       if (!user) {
         router.push("/");
         return;
       }
 
-      // If userId param exists, view other user's profile
-      // Otherwise, view own profile
       const targetUserId = userId || user.id;
       const isOwn = userId === null || userId === user.id;
       setViewingOwn(isOwn);
 
-      // Fetch profile
       const { data: profileData } = await supabase
         .from("users")
         .select("*")
         .eq("id", targetUserId)
-        .single();
+        .maybeSingle();
 
       if (profileData) {
         setProfile(profileData);
 
-        // Fetch activities created by this user
         const { data: activitiesData } = await supabase
           .from("activities")
-          .select("id, title, activity_date, category, city")
+          .select(
+            "id, title, description, activity_date, category, city, max_people, user_id, created_at"
+          )
           .eq("user_id", targetUserId)
           .order("activity_date", { ascending: false });
 
@@ -91,247 +91,188 @@ function ProfileContent() {
     fetchData();
   }, [router, userId]);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const isUpcoming = (dateStr: string) => {
-    const activityDate = new Date(dateStr);
-    return activityDate > new Date();
-  };
-
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-transparent animate-spin"></div>
-          </div>
-          <p className="text-slate-500 font-medium">Loading profile...</p>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
+        <Spinner label="Loading profile…" />
       </main>
     );
   }
 
   if (!profile) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-4xl mb-4">
-            😕
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
+      <AppShell title="Profile">
+        <div className="py-16 text-center">
+          <h2 className="text-lg font-semibold text-stone-900">
             Profile not found
           </h2>
-          <p className="text-slate-600 mb-6">This user doesn't exist.</p>
+          <p className="mt-1 text-sm text-stone-500">
+            This user doesn&apos;t exist.
+          </p>
           <button
+            type="button"
             onClick={() => router.push("/")}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl"
+            className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:bg-coral-hover"
           >
-            Go Home
+            Go home
           </button>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-150 h-150 bg-blue-100/60 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-125 h-125 bg-sky-50 rounded-full blur-3xl" />
-      </div>
-
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100">
-        <div className="max-w-2xl mx-auto px-6 py-3 flex justify-between items-center">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <AppShell
+      title={viewingOwn ? "Your profile" : `@${profile.username}`}
+      subtitle={profile.city || undefined}
+    >
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div
+          className="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-sm sm:p-8"
+        >
+          <div className="flex flex-col items-center text-center">
+            <div
+              className="flex size-28 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-5xl font-bold text-white shadow-md"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="font-medium">Back</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-              O
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                profile.username?.charAt(0).toUpperCase()
+              )}
             </div>
-            <span className="text-lg font-bold text-slate-900">Outzy</span>
-          </div>
 
-          <div className="w-16"></div>
-        </div>
-      </nav>
+            <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-navy">
+              @{profile.username}
+            </h1>
 
-      {/* Profile Header */}
-      <div className="max-w-2xl mx-auto px-6 pt-8">
-        {/* Avatar */}
-        <div className="flex flex-col items-center">
-          <div className="w-28 h-28 rounded-full bg-linear-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-5xl font-bold shadow-xl">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.username}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              profile.username?.charAt(0).toUpperCase()
+            {profile.city && (
+              <p className="mt-1 flex items-center gap-1 text-sm font-medium text-stone-600">
+                <span aria-hidden>📍</span>
+                {profile.city}
+              </p>
             )}
+
+            {profile.bio && (
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-stone-600">
+                {profile.bio}
+              </p>
+            )}
+
+            <p className="mt-3 text-xs text-stone-400">
+              Member since {formatMemberSince(profile.created_at)}
+            </p>
           </div>
 
-          {/* Username */}
-          <h1 className="text-2xl font-black text-slate-900 mt-4">
-            @{profile.username}
-          </h1>
-
-          {/* Location */}
-          {profile.city && (
-            <div className="flex items-center gap-1 text-slate-600 mt-1">
-              <span>📍</span>
-              <span className="font-medium">{profile.city}</span>
+          {profile.interests && profile.interests.length > 0 && (
+            <div className="mt-6 border-t border-stone-100 pt-6">
+              <h2 className="text-center text-xs font-bold uppercase tracking-wide text-stone-500">
+                Interests
+              </h2>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {profile.interests.map((interest, idx) => (
+                  <span
+                    key={idx}
+                    className="rounded-full bg-coral-50 px-4 py-2 text-sm font-semibold text-coral"
+                  >
+                    {interest}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
-
-          {/* Bio */}
-          {profile.bio && (
-            <p className="text-slate-600 text-center mt-3 max-w-md">
-              {profile.bio}
-            </p>
-          )}
-
-          {/* Member since */}
-          <p className="text-slate-400 text-sm mt-3">
-            Member since {formatDate(profile.created_at)}
-          </p>
         </div>
 
-        {/* Interests */}
-        {profile.interests && profile.interests.length > 0 && (
-          <div className="mt-6">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3">
-              Interests
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {profile.interests.map((interest, idx) => (
-                <span
-                  key={idx}
-                  className="bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium"
-                >
-                  {interest}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Activities Section */}
-        <div className="mt-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">
-            {viewingOwn ? "My Activities" : `Activities by @${profile.username}`}
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">
+            {viewingOwn ? "Your plans" : `Plans by @${profile.username}`}
           </h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Same cards as the feed — upcoming and past activities.
+          </p>
 
           {activities.length === 0 ? (
-            <div className="text-center py-8 bg-slate-50 rounded-xl">
-              <div className="text-3xl mb-2">📭</div>
-              <p className="text-slate-600">
-                {viewingOwn
-                  ? "No activities yet. Create your first one!"
-                  : "No activities yet."}
+            <div
+              className="mt-6 rounded-3xl border border-dashed border-stone-200 bg-stone-50/80 px-6 py-12 text-center"
+            >
+              <p className="text-3xl" aria-hidden>📭</p>
+              <p className="mt-2 font-semibold text-stone-800">
+                {viewingOwn ? "No plans yet" : "No public plans yet"}
               </p>
               {viewingOwn && (
                 <button
+                  type="button"
                   onClick={() => router.push("/create-activity")}
-                  className="mt-4 bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg"
+                  className="mt-4 rounded-full bg-coral px-6 py-2.5 text-sm font-bold text-white hover:bg-coral-hover"
                 >
-                  Create Activity
+                  Plan something
                 </button>
               )}
             </div>
           ) : (
-            <div className="space-y-3">
-              {activities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className={`bg-white border-2 rounded-xl p-4 ${
-                    isUpcoming(activity.activity_date)
-                      ? "border-slate-200"
-                      : "border-slate-100 opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                        {CATEGORY_LABELS[activity.category] || activity.category}
-                      </span>
-                      <h3 className="font-bold text-slate-900 mt-1">
-                        {activity.title}
-                      </h3>
-                      <p className="text-sm text-slate-500">
-                        {formatDate(activity.activity_date)} • {activity.city}
-                      </p>
-                    </div>
-                    {!isUpcoming(activity.activity_date) && (
-                      <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                        Past
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div
+              className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {activities.map((activity) => {
+                const upcoming = isUpcoming(activity.activity_date);
+                return (
+                  <ActivityCard
+                    key={activity.id}
+                    activity={{
+                      ...activity,
+                      host: viewingOwn
+                        ? undefined
+                        : {
+                            id: profile.id,
+                            username: profile.username,
+                            avatar_url: profile.avatar_url,
+                          },
+                    }}
+                    upcoming={upcoming}
+                    showHost={!viewingOwn}
+                    distanceLabel={null}
+                    readOnly={!viewingOwn}
+                    mode="mine"
+                    onJoin={() => router.push("/feed")}
+                    onHostClick={() =>
+                      router.push(`/profile?userId=${profile.id}`)
+                    }
+                    onRequests={() => router.push("/feed")}
+                    onEdit={() => router.push(`/activity/${activity.id}`)}
+                    onOpenChat={undefined}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Action Buttons */}
         {!viewingOwn && (
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => router.push(`/feed?userId=${profile.id}`)}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl"
-            >
-              View Activities
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/feed")}
+            className="w-full rounded-full border border-stone-200 bg-white py-3 text-sm font-bold text-stone-800 shadow-sm hover:border-coral-100 hover:text-coral"
+          >
+            Back to feed
+          </button>
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }
 
-// Wrapper with Suspense for useSearchParams
 export default function ProfilePage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-transparent animate-spin"></div>
-          </div>
-          <p className="text-slate-500 font-medium">Loading...</p>
-        </div>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
+          <Spinner />
+        </main>
+      }
+    >
       <ProfileContent />
     </Suspense>
   );

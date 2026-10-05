@@ -2,10 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LandingHeroVisual } from "@/components/landing-hero-visual";
+import { RevealOnScroll } from "@/components/reveal-on-scroll";
+import { SiteNavbar } from "@/components/site-navbar";
+import { Spinner } from "@/components/spinner";
+import { LandingCategoriesSection } from "@/components/landing-categories-section";
+import { PAGE_CONTAINER } from "@/lib/layout";
+import { signInWithGoogleNext } from "@/lib/auth-nav";
+import { fetchUserProfile, isProfileComplete } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
 
+const pillPrimary =
+  "pill-interactive inline-flex items-center justify-center gap-2 rounded-full bg-coral px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-teal-900/15 transition-colors hover:bg-coral-hover hover:shadow-xl disabled:opacity-70";
+
+const pillOutline =
+  "pill-interactive inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/40 bg-transparent px-8 py-3.5 text-base font-semibold text-white transition-colors hover:border-white hover:bg-white/10";
+
 export default function Home() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const router = useRouter();
@@ -14,24 +28,20 @@ export default function Home() {
     const getUser = async () => {
       try {
         const {
-          data: { user },
+          data: { user: u },
         } = await supabase.auth.getUser();
 
-        if (!user) {
+        if (!u) {
           return;
         }
 
-        setUser(user);
-        const { data: profile } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", user.id)
-          .single();
+        setUser(u);
+        const { profile, error: profileError } = await fetchUserProfile(u.id);
 
-        if (!profile?.username) {
+        if (profileError) {
+          console.error("Could not load profile:", profileError.message);
+        } else if (!isProfileComplete(profile)) {
           router.push("/onboarding");
-        } else {
-          router.push("/feed");
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -43,489 +53,314 @@ export default function Home() {
     getUser();
   }, [router]);
 
-  const login = async () => {
+  const login = async (nextPath = "/feed") => {
     setAuthLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/onboarding`,
-        },
-      });
+      await signInWithGoogleNext(nextPath);
     } catch (error) {
       console.error("Auth error:", error);
       setAuthLoading(false);
     }
   };
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-transparent animate-spin"></div>
-          </div>
-          <p className="text-slate-500 font-medium">Loading Outzy...</p>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
+        <Spinner label="Loading Outzy…" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Animated Background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-150 h-150 bg-blue-100/60 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-125 h-125 bg-sky-50 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-50 rounded-full blur-3xl animate-pulse" />
-      </div>
+    <main className="min-h-screen overflow-x-hidden bg-[#faf9f7] text-navy">
+      <SiteNavbar />
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="h-10 w-10 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-200">
-                O
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-slate-900 leading-tight">
-                Outzy
-              </span>
-              <span className="text-[10px] font-medium text-blue-600 -mt-0.5">
-                explore together
-              </span>
-            </div>
-          </div>
-          {user && (
-            <div className="hidden md:flex items-center gap-4">
-              <button
-                onClick={() => router.push("/feed")}
-                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+      {/* Hero */}
+      <section className="landing-mesh relative">
+        <div className={`${PAGE_CONTAINER} py-14 md:py-24`}>
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <div className="text-center lg:text-left">
+              <p
+                className="mb-4 inline-flex animate-fade-up items-center gap-2 rounded-full border border-teal-100 bg-white/80 px-4 py-1.5 text-sm font-medium text-stone-600 shadow-sm backdrop-blur-sm"
               >
-                Discover
-              </button>
-
-              <button className="text-sm font-medium text-slate-600 hover:text-blue-600">
-                Adventures
-              </button>
-
-              <button className="text-sm font-medium text-slate-600 hover:text-blue-600">
-                Community
-              </button>
-
-              <button
-                onClick={() => router.push("/create-activity")}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2"
+                <span className="size-2 rounded-full bg-coral animate-pulse" />
+                Your vibe, your people.
+              </p>
+              <h1
+                className="animate-fade-up stagger-1 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl"
               >
-                <span className="text-lg">+</span>
-                Create Activity
-              </button>
-            </div>
-          )}
-          {/* Nav Links */}
-          {!user && (
-            <div className="hidden md:flex items-center gap-6">
-              <a
-                href="#how-it-works"
-                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                Main character plans,{" "}
+                <span className="bg-linear-to-r from-teal-600 to-emerald-600 bg-clip-text text-transparent">
+                  zero group-chat chaos.
+                </span>
+              </h1>
+              <p
+                className="animate-fade-up stagger-2 mx-auto mt-6 max-w-lg text-lg leading-relaxed text-stone-600 lg:mx-0"
               >
-                How it works
-              </a>
-              <a
-                href="#why-outzy"
-                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                Share the struggle of meeting people IRL. Find curated hangs, small
+                groups, and plans that actually happen — without the endless group
+                chat spiral.
+              </p>
+
+              <div
+                className="animate-fade-up stagger-3 mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start"
               >
-                Why Outzy
-              </a>
-              <button
-                onClick={login}
-                disabled={authLoading}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-lg transition-all"
-              >
-                Get Early Access
-              </button>
-            </div>
-          )}
-
-          {user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
-                {user.user_metadata.avatar_url ? (
-                  <img
-                    src={user.user_metadata.avatar_url}
-                    alt="profile"
-                    className="w-9 h-9 rounded-full"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                    {user.user_metadata.full_name?.charAt(0)}
-                  </div>
-                )}
-
-                <div className="hidden sm:block">
-                  <p className="text-xs text-slate-500">Welcome back</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Hey, {user.user_metadata.full_name?.split(" ")[0]} 👋
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={logout}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-              >
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={login}
-              className="md:hidden p-2 bg-slate-900 text-white rounded-lg"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div className="space-y-8 text-center lg:text-left">
-            {/* Tag - USP instead of location */}
-            <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-4 py-2 rounded-full">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-sm font-semibold text-blue-700">
-                Life's too short to explore solo
-              </span>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 leading-tight">
-              Discover people
-              <br />
-              <span className="bg-linear-to-r from-blue-600 via-indigo-600 to-blue-800 bg-clip-text text-transparent">
-                to explore with
-              </span>
-            </h1>
-
-            {/* Subtext */}
-            <p className="text-lg md:text-xl text-slate-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Find curated adventures, local experiences, and build genuine{" "}
-              <span className="font-semibold text-slate-900">friendships</span>{" "}
-              through exploring the world together.
-            </p>
-
-            {/* Key Benefits */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-              {[
-                { emoji: "🗺️", text: "Curated adventures" },
-                { emoji: "🤝", text: "Small groups" },
-                { emoji: "🧭", text: "Local guides" },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-full shadow-sm"
-                >
-                  <span>{item.emoji}</span>
-                  <span className="text-sm font-medium text-slate-700">
-                    {item.text}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA - Different for logged in vs logged out */}
-            {user ? (
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
-                <button
-                  onClick={() => router.push("/create-activity")}
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
-                >
-                  <span className="text-xl">✨</span>
-                  Create Activity
-                </button>
-                <button
-                  onClick={() => router.push("/feed")}
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 font-bold text-lg rounded-2xl shadow-sm hover:shadow transition-all"
-                >
-                  <span className="text-xl">🔍</span>
-                  Discover Activities
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={login}
-                disabled={authLoading}
-                className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {authLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                {user ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/feed")}
+                      className={pillPrimary}
+                    >
+                      Find your people
+                      <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>
+                        →
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollTo("how-it-works")}
+                      className="pill-interactive text-sm font-semibold text-stone-600 transition-colors hover:text-coral"
+                    >
+                      See how it works →
+                    </button>
+                  </>
                 ) : (
                   <>
-                    <span className="text-xl">🧭</span>
-                    Get Early Access
+                    <button
+                      type="button"
+                      onClick={() => login()}
+                      disabled={authLoading}
+                      className={pillPrimary}
+                    >
+                      {authLoading ? "Connecting…" : "Find your people"}
+                      {!authLoading && <span aria-hidden>→</span>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollTo("how-it-works")}
+                      className="pill-interactive text-sm font-semibold text-stone-600 transition-colors hover:text-coral"
+                    >
+                      See how it works →
+                    </button>
                   </>
                 )}
-              </button>
-            )}
-          </div>
-
-          {/* Right Visual - Travel-themed */}
-          <div className="relative hidden lg:block">
-            <div className="relative w-full aspect-square max-w-md mx-auto">
-              {/* Floating Cards - Adventure Themed */}
-              <div className="absolute top-10 left-0 bg-white border-2 border-blue-100 rounded-3xl p-5 shadow-xl -rotate-3 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">🏔️</div>
-                  <div>
-                    <p className="font-bold text-slate-900">Sunrise Hike</p>
-                    <p className="text-sm text-slate-500">Tom & 3 others</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute top-40 right-0 bg-white border-2 border-indigo-100 rounded-3xl p-5 shadow-xl rotate-2 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">☕</div>
-                  <div>
-                    <p className="font-bold text-slate-900">Coffee Crawl</p>
-                    <p className="text-sm text-slate-500">Hidden gems</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute bottom-20 left-10 bg-white border-2 border-sky-100 rounded-3xl p-5 shadow-xl rotate-1 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">📸</div>
-                  <div>
-                    <p className="font-bold text-slate-900">Photo Walk</p>
-                    <p className="text-sm text-slate-500">Golden hour</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute bottom-10 right-10 bg-linear-to-br from-blue-600 to-indigo-600 text-white rounded-3xl p-5 shadow-xl -rotate-2 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">🧭</div>
-                  <div>
-                    <p className="font-bold">Adventure awaits</p>
-                    <p className="text-sm text-white/80">Join the crew</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Center Logo */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <div className="w-28 h-28 bg-linear-to-br from-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center text-white text-5xl shadow-2xl">
-                  🌍
-                </div>
               </div>
             </div>
+
+            <LandingHeroVisual />
           </div>
+
+          <ul
+            className="animate-fade-up stagger-4 mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 rounded-2xl border border-stone-200/60 bg-white/60 py-6 text-sm text-stone-600 shadow-sm backdrop-blur-sm"
+          >
+            {[
+              "Curated experiences",
+              "Small, welcoming groups",
+              "Verified local hosts",
+              "No awkward swiping",
+            ].map((item) => (
+              <li key={item} className="flex items-center gap-2">
+                <span
+                  className="flex size-5 items-center justify-center rounded-full bg-coral-50 text-xs text-coral"
+                  aria-hidden
+                >
+                  ✓
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      </section>
 
-      {/* How It Works - Improved */}
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <h2 className="text-3xl md:text-4xl font-black text-center mb-4 text-slate-900">
-          How It Works
-        </h2>
-        <p className="text-center text-slate-600 mb-12 max-w-xl mx-auto">
-          Finding your adventure tribe is easy. No complicated apps, no endless
-          swiping.
-        </p>
+      {/* How it works */}
+      <section id="how-it-works" className={`${PAGE_CONTAINER} py-16 md:py-24`}>
+        <RevealOnScroll>
+          <h2 className="text-center text-3xl font-bold tracking-tight md:text-4xl">
+            From &ldquo;maybe someday&rdquo; to{" "}
+            <span className="text-coral">see you there.</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-stone-600">
+            Simple by design — four steps and you&apos;re out the door.
+          </p>
+        </RevealOnScroll>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               step: "01",
-              title: "Join with Google",
-              desc: "Sign up in 30 seconds using your Google account. That's it.",
-              icon: "🔐",
+              title: "Create your profile",
+              desc: "Sign in with Google and tell people what you're into.",
+              icon: "👤",
+              tint: "bg-coral-50",
             },
             {
               step: "02",
-              title: "Find Adventures",
-              desc: "Browse curated activities near you - hiking, food tours, photo walks, and more.",
+              title: "Find your thing",
+              desc: "Browse hikes, coffee, games, and everything in between.",
               icon: "🔍",
+              tint: "bg-violet-50",
             },
             {
               step: "03",
-              title: "Request to Join",
-              desc: "Send a quick request to join. Chat with the host before committing.",
+              title: "Save your spot",
+              desc: "Request to join. Small groups, no pressure.",
               icon: "✋",
+              tint: "bg-sky-50",
             },
             {
               step: "04",
-              title: "Explore Together",
-              desc: "Meet new people, have fun, and rate your experience to help others.",
+              title: "Go do it together",
+              desc: "Show up, make friends, rate the vibe.",
               icon: "🌟",
+              tint: "bg-amber-50",
             },
-          ].map((item, idx) => (
-            <div
-              key={idx}
-              className="relative bg-white border-2 border-slate-100 rounded-3xl p-6 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all group"
-            >
-              {/* Step number */}
-              <div className="absolute -top-3 -left-3 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                {item.step}
-              </div>
-
-              <div className="text-4xl mb-4">{item.icon}</div>
-              <h3 className="font-bold text-slate-900 mb-2">{item.title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                {item.desc}
-              </p>
-
-              {/* Arrow connector */}
-              {idx < 3 && (
-                <div className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 text-2xl text-slate-300 group-hover:text-blue-300 transition-colors">
-                  →
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Why Outzy - Dark Section */}
-      <div className="bg-slate-900 text-white py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-black mb-6">
-            Why Outzy? 🌎
-          </h2>
-          <p className="text-lg text-slate-300 mb-10 max-w-2xl mx-auto">
-            We built Outzy because doing things alone sucks. But bars are loud,
-            dating apps aren't for friends, and Meetup is basically Craigslist.
-            Outzy is new. Built for this generation. Built for real connections.
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-            {[
-              { icon: "✓", title: "Real people, verified profiles" },
-              {
-                icon: "✓",
-                title: "Safe locations - landmarks, not exact addresses",
-              },
-              { icon: "✓", title: "Small groups - 2 to 8 people max" },
-              { icon: "✓", title: "Chats expire after your adventure" },
-              { icon: "✓", title: "Rate hosts and attendees" },
-              { icon: "✓", title: "No creepers, no spam" },
-            ].map((item, idx) => (
+          ].map((item, i) => (
+            <RevealOnScroll key={item.step} delayMs={i * 80}>
               <div
-                key={idx}
-                className="flex items-center justify-center gap-2 bg-white/10 px-4 py-3 rounded-xl text-left"
+                className="card-lift relative h-full rounded-3xl border border-stone-200/80 bg-white p-6 shadow-sm hover:border-teal-100/80"
               >
-                <span className="text-blue-400">{item.icon}</span>
-                <span className="text-sm font-medium">{item.title}</span>
+                <span className="absolute right-5 top-5 text-sm font-bold text-stone-300">
+                  {item.step}
+                </span>
+                <div
+                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-xl ${item.tint}`}
+                >
+                  {item.icon}
+                </div>
+                <h3 className="font-bold text-stone-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-stone-500">
+                  {item.desc}
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* What Activities Can You Join? */}
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <h2 className="text-3xl md:text-4xl font-black text-center mb-4 text-slate-900">
-          What Can You Join?
-        </h2>
-        <p className="text-center text-slate-600 mb-12 max-w-xl mx-auto">
-          Literally anything involving real people in the real world. Host your
-          own or join others.
-        </p>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            {
-              emoji: "🏔️",
-              name: "Hiking",
-              color: "bg-emerald-50 border-emerald-200",
-            },
-            {
-              emoji: "☕",
-              name: "Coffee",
-              color: "bg-amber-50 border-amber-200",
-            },
-            {
-              emoji: "🚴",
-              name: "Cycling",
-              color: "bg-orange-50 border-orange-200",
-            },
-            { emoji: "🌊", name: "Beaches", color: "bg-sky-50 border-sky-200" },
-            {
-              emoji: "🍜",
-              name: "Food Tours",
-              color: "bg-red-50 border-red-200",
-            },
-            {
-              emoji: "📸",
-              name: "Photo Walks",
-              color: "bg-violet-50 border-violet-200",
-            },
-            {
-              emoji: "🎨",
-              name: "Museums",
-              color: "bg-fuchsia-50 border-fuchsia-200",
-            },
-            { emoji: "💃", name: "Dance", color: "bg-pink-50 border-pink-200" },
-            {
-              emoji: "🏃",
-              name: "Running",
-              color: "bg-rose-50 border-rose-200",
-            },
-            {
-              emoji: "🎮",
-              name: "Gaming",
-              color: "bg-indigo-50 border-indigo-200",
-            },
-            { emoji: "🧘", name: "Yoga", color: "bg-teal-50 border-teal-200" },
-            {
-              emoji: "🥂",
-              name: "Nightlife",
-              color: "bg-slate-50 border-slate-200",
-            },
-          ].map((activity, idx) => (
-            <div
-              key={idx}
-              className={`p-5 rounded-2xl border-2 text-center hover:scale-105 transition-all cursor-pointer hover:shadow-lg ${activity.color}`}
-            >
-              <div className="text-3xl mb-2">{activity.emoji}</div>
-              <p className="font-semibold text-slate-800">{activity.name}</p>
-            </div>
+            </RevealOnScroll>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-100 py-8">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-slate-400 text-sm font-medium">
-            © 2025 Outzy. Explore the world. 🌍
-          </p>
+      {/* Why Outzy — dark */}
+      <section id="why-outzy" className={`${PAGE_CONTAINER} pb-16 md:pb-24`}>
+        <RevealOnScroll>
+          <div
+            className="overflow-hidden rounded-[2rem] bg-linear-to-br from-navy via-[#1a2332] to-[#0f3d35] px-6 py-12 shadow-2xl shadow-navy/20 md:px-12 md:py-16"
+          >
+            <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                  Why Outzy
+                </p>
+                <h2 className="mt-3 text-3xl font-bold leading-tight text-white md:text-4xl">
+                  Log off.{" "}
+                  <span className="bg-highlight px-1 text-navy">Go make lore.</span>
+                </h2>
+                <p className="mt-4 max-w-md text-stone-300">
+                  Built for people who want real plans with real humans — not
+                  another dead group chat.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    user ? router.push("/feed") : login("/feed")
+                  }
+                  className={`mt-8 ${pillOutline}`}
+                >
+                  Join the community →
+                </button>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { icon: "🛡️", title: "Real people", desc: "Verified profiles" },
+                  {
+                    icon: "📍",
+                    title: "Safe by default",
+                    desc: "Landmarks, not exact addresses",
+                  },
+                  {
+                    icon: "💬",
+                    title: "Actually social",
+                    desc: "Small groups that show up",
+                  },
+                  {
+                    icon: "✨",
+                    title: "No pressure",
+                    desc: "Request, chat, then commit",
+                  },
+                ].map((item, i) => (
+                  <div
+                    key={item.title}
+                    className="card-lift rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+                    style={{ transitionDelay: `${i * 50}ms` }}
+                  >
+                    <span className="text-2xl">{item.icon}</span>
+                    <h3 className="mt-2 font-semibold text-white">{item.title}</h3>
+                    <p className="mt-1 text-sm text-stone-400">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </RevealOnScroll>
+      </section>
+
+      <LandingCategoriesSection />
+
+      {/* Footer CTA */}
+      <section className={`${PAGE_CONTAINER} pb-12`}>
+        <RevealOnScroll>
+          <div
+            className="relative overflow-hidden rounded-[2rem] bg-linear-to-br from-teal-600 via-teal-600 to-emerald-600 px-6 py-12 text-center text-white shadow-xl shadow-teal-900/20 md:px-12 md:py-16"
+          >
+            <div
+              className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-white/10 blur-3xl"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -bottom-16 -left-16 size-48 rounded-full bg-emerald-400/20 blur-2xl"
+              aria-hidden
+            />
+            <p className="relative text-sm font-medium uppercase tracking-widest text-white/80">
+              Your outside era starts now
+            </p>
+            <h2 className="relative mt-3 text-2xl font-bold md:text-3xl">
+              We&apos;ll duck out. You don&apos;t have to.
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                user
+                  ? router.push("/create-activity")
+                  : login("/create-activity")
+              }
+              disabled={authLoading}
+              className="pill-interactive relative mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-base font-semibold text-navy shadow-md disabled:opacity-70"
+            >
+              {user ? "Plan something" : "Get early access"}
+              <span aria-hidden>→</span>
+            </button>
+          </div>
+        </RevealOnScroll>
+      </section>
+
+      <footer className="border-t border-stone-200/80 py-8">
+        <div
+          className={`${PAGE_CONTAINER} flex flex-col items-center justify-between gap-4 text-sm text-stone-500 sm:flex-row`}
+        >
+          <span className="font-bold text-coral">Outzy</span>
+          <p>© {new Date().getFullYear()} Outzy. All rights reserved.</p>
+          <div className="flex gap-6">
+            <a href="#" className="transition-colors hover:text-stone-800">
+              Safety
+            </a>
+            <a href="#" className="transition-colors hover:text-stone-800">
+              Contact
+            </a>
+          </div>
         </div>
       </footer>
     </main>

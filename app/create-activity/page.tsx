@@ -1,25 +1,60 @@
 "use client";
 
-import { useState, useEffect, type SubmitEventHandler } from "react";
-import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { Suspense, useState, useEffect, type SubmitEventHandler } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { Spinner } from "@/components/spinner";
+import type { MapLocationConfirmPayload } from "@/components/map-location-picker";
+import type { ActivityInsert } from "@/lib/activities";
+import { safeNextPath, signInWithGoogleNext } from "@/lib/auth-nav";
+import { fetchUserProfile, isProfileComplete } from "@/lib/profile";
+import { CATEGORIES } from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
 
-const CATEGORIES = [
-  { value: "hiking", label: "🏔️ Hiking" },
-  { value: "coffee", label: "☕ Coffee" },
-  { value: "cycling", label: "🚴 Cycling" },
-  { value: "beaches", label: "🌊 Beaches" },
-  { value: "food", label: "🍜 Food Tours" },
-  { value: "photography", label: "📸 Photography" },
-  { value: "art", label: "🎨 Art & Culture" },
-  { value: "dance", label: "💃 Music & Dance" },
-  { value: "running", label: "🏃 Running" },
-  { value: "gaming", label: "🎮 Gaming" },
-  { value: "yoga", label: "🧘 Yoga" },
-  { value: "nightlife", label: "🥂 Nightlife" },
-];
+const MapLocationPicker = dynamic(
+  () =>
+    import("@/components/map-location-picker").then((m) => m.MapLocationPicker),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
-export default function CreateActivityPage() {
+type MapPinnedLocation = {
+  latitude: number;
+  longitude: number;
+  primaryLine: string;
+  secondaryLine: string;
+};
+
+async function geocodeLocation(
+  locationText: string
+): Promise<{ latitude: number | null; longitude: number | null }> {
+  try {
+    const res = await fetch(
+      `/api/geocode?q=${encodeURIComponent(locationText)}`
+    );
+    if (!res.ok) {
+      return { latitude: null, longitude: null };
+    }
+    const data = (await res.json()) as {
+      latitude?: number | null;
+      longitude?: number | null;
+    };
+    return {
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+    };
+  } catch {
+    return { latitude: null, longitude: null };
+  }
+}
+
+function CreateActivityPageContent() {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -33,9 +68,18 @@ export default function CreateActivityPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  const [mapPinned, setMapPinned] = useState<MapPinnedLocation | null>(null);
   const router = useRouter();
 
-  // Check auth
+  useEffect(() => {
+    if (!categoryParam) return;
+    const valid = CATEGORIES.some((c) => c.value === categoryParam);
+    if (valid) {
+      setFormData((prev) => ({ ...prev, category: categoryParam }));
+    }
+  }, [categoryParam]);
+
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -43,9 +87,29 @@ export default function CreateActivityPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push("/");
+        const next = `/create-activity${window.location.search}`;
+        await signInWithGoogleNext(next);
         return;
       }
+
+      const { profile, error: profileError } = await fetchUserProfile(user.id);
+
+      if (profileError) {
+        console.error("Could not load profile:", profileError.message);
+        setError("Could not verify your profile. Try again or check Supabase RLS.");
+        setLoading(false);
+        return;
+      }
+
+      if (!isProfileComplete(profile)) {
+        const next = safeNextPath(
+          `/create-activity${window.location.search}`,
+          "/create-activity"
+        );
+        router.push(`/onboarding?next=${encodeURIComponent(next)}`);
+        return;
+      }
+
       setLoading(false);
     };
 
@@ -59,6 +123,23 @@ export default function CreateActivityPage() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "location") {
+      setMapPinned(null);
+    }
+    setError("");
+  };
+
+  const handleMapConfirm = (result: MapLocationConfirmPayload) => {
+    setMapPinned({
+      latitude: result.latitude,
+      longitude: result.longitude,
+      primaryLine: result.primaryLine,
+      secondaryLine: result.secondaryLine,
+    });
+    setFormData((prev) => ({
+      ...prev,
+      location: result.locationText,
+    }));
     setError("");
   };
 
@@ -104,16 +185,32 @@ export default function CreateActivityPage() {
         return;
       }
 
-      // Create activity
-      const { error: dbError } = await supabase.from("activities").insert({
+      const locationText = formData.location.trim();
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      if (mapPinned) {
+        latitude = mapPinned.latitude;
+        longitude = mapPinned.longitude;
+      } else {
+        const geocoded = await geocodeLocation(locationText);
+        latitude = geocoded.latitude;
+        longitude = geocoded.longitude;
+      }
+
+      const payload: ActivityInsert = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        city: formData.location.trim(),
-       activity_date: `${formData.date}T${formData.time}:00`,
-        max_people: parseInt(formData.maxPeople),
+        city: locationText,
+        activity_date: `${formData.date}T${formData.time}:00`,
+        max_people: parseInt(formData.maxPeople, 10),
         category: formData.category,
         user_id: user.id,
-      });
+        latitude,
+        longitude,
+      };
+
+      const { error: dbError } = await supabase.from("activities").insert(payload);
 
       if (dbError) {
         console.error("DB Error:", dbError);
@@ -137,91 +234,32 @@ export default function CreateActivityPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-transparent animate-spin"></div>
-          </div>
-          <p className="text-slate-500 font-medium">Loading...</p>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-stone-50">
+        <Spinner />
       </main>
     );
   }
 
   if (success) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-4xl">
-            ✅
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">
-            Activity Created!
+      <AppShell title="Create activity">
+        <div className="max-w-xl py-16 text-center">
+          <h2 className="text-lg font-semibold text-stone-900">
+            Activity created
           </h2>
-          <p className="text-slate-600">Redirecting you home...</p>
+          <p className="mt-1 text-sm text-stone-500">Redirecting…</p>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-150 h-150 bg-blue-100/60 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-125 h-125 bg-sky-50 rounded-full blur-3xl" />
-      </div>
-
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="font-medium">Back</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-              O
-            </div>
-            <span className="text-lg font-bold text-slate-900">Outzy</span>
-          </div>
-
-          <div className="w-16"></div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <div className="max-w-xl mx-auto px-6 pt-12 pb-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-blue-400 to-indigo-400 text-3xl shadow-lg mb-4">
-          ✨
-        </div>
-        <h1 className="text-3xl font-black text-slate-900 mb-2">
-          Create an Activity
-        </h1>
-        <p className="text-slate-600">
-          Bring people together through shared experiences
-        </p>
-      </div>
-
-      {/* Form - Matching Onboarding Style */}
-      <div className="max-w-xl mx-auto px-6 pb-12">
+    <AppShell
+      headerAlign="center"
+      title="Create activity"
+      subtitle="Post something for others to join"
+    >
+      <div className="mx-auto max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Title */}
           <div>
@@ -237,8 +275,8 @@ export default function CreateActivityPage() {
               type="text"
               value={formData.title}
               onChange={handleChange}
-              placeholder="e.g., Sunrise Hike at Twin Peaks"
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all placeholder:text-slate-400 text-black"
+              // placeholder="e.g., "
+              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all placeholder:text-slate-400 text-black"
               autoFocus
             />
           </div>
@@ -256,9 +294,9 @@ export default function CreateActivityPage() {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="What can people expect? What's the plan?"
+              placeholder="Yoo brooo? What's the plan?"
               rows={3}
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all resize-none"
+              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all resize-none"
             />
           </div>
 
@@ -276,13 +314,36 @@ export default function CreateActivityPage() {
               type="text"
               value={formData.location}
               onChange={handleChange}
-              placeholder="e.g., Twin Peaks, San Francisco"
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all"
+              // placeholder="e.g., Twin Peaks, San Francisco"
+              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
             />
+            <button
+              type="button"
+              onClick={() => setMapPickerOpen(true)}
+              className="mt-2 w-full rounded-full border border-stone-200 bg-white py-2.5 text-sm font-medium text-coral transition-colors hover:border-coral-100 hover:bg-coral-50"
+            >
+              Select on map
+            </button>
+            {mapPinned && (
+              <div
+                className="mt-3 rounded-2xl border border-coral-100 bg-coral-50 px-4 py-3 text-sm text-navy"
+              >
+                <p className="font-medium">📍 Selected location</p>
+                <p className="mt-1 font-semibold">{mapPinned.primaryLine}</p>
+                <p className="text-stone-600">{mapPinned.secondaryLine}</p>
+              </div>
+            )}
             <p className="text-xs text-slate-500 mt-1">
-              Enter a landmark - exact address shared after confirmation
+              Type a landmark or use the map — exact address shared after
+              confirmation
             </p>
           </div>
+
+          <MapLocationPicker
+            open={mapPickerOpen}
+            onClose={() => setMapPickerOpen(false)}
+            onConfirm={handleMapConfirm}
+          />
 
           {/* Date & Time */}
           <div className="grid grid-cols-2 gap-4">
@@ -299,7 +360,7 @@ export default function CreateActivityPage() {
                 type="date"
                 value={formData.date}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all"
+                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
               />
             </div>
             <div>
@@ -315,7 +376,7 @@ export default function CreateActivityPage() {
                 type="time"
                 value={formData.time}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all"
+                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
               />
             </div>
           </div>
@@ -334,7 +395,7 @@ export default function CreateActivityPage() {
                 name="maxPeople"
                 value={formData.maxPeople}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all bg-white"
+                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all bg-white"
               >
                 {[2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20].map((num) => (
                   <option key={num} value={num}>
@@ -355,7 +416,7 @@ export default function CreateActivityPage() {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all bg-white"
+                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all bg-white"
               >
                 <option value="">Select</option>
                 {CATEGORIES.map((cat) => (
@@ -378,7 +439,7 @@ export default function CreateActivityPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-coral py-4 text-lg font-semibold text-white transition-colors hover:bg-coral-hover disabled:cursor-not-allowed disabled:opacity-70"
           >
             {submitting ? (
               <>
@@ -398,6 +459,20 @@ export default function CreateActivityPage() {
           </p>
         </form>
       </div>
-    </main>
+    </AppShell>
+  );
+}
+
+export default function CreateActivityPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-stone-50">
+          <Spinner />
+        </main>
+      }
+    >
+      <CreateActivityPageContent />
+    </Suspense>
   );
 }
