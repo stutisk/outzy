@@ -2,8 +2,7 @@
 
 import { ArrowUpRight, Clock, MapPin, Navigation, Users } from "lucide-react";
 import { getCategoryLabel } from "@/lib/categories";
-import { getCategoryGifUrl } from "@/lib/category-gifs";
-import { CATEGORY_TINT } from "@/lib/category-tints";
+import { getCategoryVisual } from "@/lib/category-visual";
 
 export type FeedActivityCardData = {
   id: string;
@@ -88,9 +87,9 @@ export function FeedActivityCard({
   readOnly?: boolean;
 }) {
   const { month, day, weekday, time } = formatCardDate(activity.activity_date);
-  const tint =
-    CATEGORY_TINT[activity.category] ?? "from-stone-400 to-stone-500";
-  const gifUrl = getCategoryGifUrl(activity.category, activity.id);
+  const { emoji, gradientSoft, gradientAccent } = getCategoryVisual(
+    activity.category
+  );
   const hostUsername = activity.host?.username;
   const hostInitial = hostUsername?.charAt(0).toUpperCase() ?? "?";
   const badge = !upcoming
@@ -107,30 +106,31 @@ export function FeedActivityCard({
         upcoming ? "" : "opacity-85"
       }`}
     >
-      {/* Image with title overlay */}
+      {/* Category cover with title overlay */}
       <div className="relative h-44 overflow-hidden sm:h-48">
-        <img
-          src={gifUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className={`size-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transform-none ${
-            upcoming ? "" : "grayscale"
+        <div
+          aria-hidden
+          className={`landing-mesh flex size-full items-center justify-center bg-linear-to-br ${gradientSoft} ${
+            upcoming ? "" : "grayscale opacity-80"
           }`}
+        >
+          <span className="text-5xl opacity-90 select-none sm:text-6xl">
+            {emoji}
+          </span>
+        </div>
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-linear-to-t from-black/80 via-black/15 to-transparent"
         />
         <div
           aria-hidden
-          className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-black/25"
-        />
-        <div
-          aria-hidden
-          className={`absolute inset-x-0 top-0 h-1.5 bg-linear-to-r ${tint}`}
+          className={`absolute inset-x-0 top-0 h-1.5 bg-linear-to-r ${gradientAccent}`}
         />
 
         <span className="absolute left-3.5 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/95 py-1 pl-2.5 pr-3 text-xs font-bold text-stone-800 shadow-sm backdrop-blur">
           <span
             aria-hidden
-            className={`size-2.5 rounded-full bg-linear-to-br ${tint}`}
+            className={`size-2.5 rounded-full bg-linear-to-br ${gradientAccent}`}
           />
           {getCategoryLabel(activity.category)}
         </span>

@@ -34,14 +34,6 @@ function isUpcoming(dateStr: string) {
   return new Date(dateStr) > new Date();
 }
 
-function formatMemberSince(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function ProfileContent() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
@@ -102,119 +94,92 @@ function ProfileContent() {
   if (!profile) {
     return (
       <AppShell title="Profile">
-        <div className="py-16 text-center">
-          <h2 className="text-lg font-semibold text-stone-900">
-            Profile not found
-          </h2>
-          <p className="mt-1 text-sm text-stone-500">
-            This user doesn&apos;t exist.
-          </p>
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:bg-coral-hover"
-          >
-            Go home
-          </button>
-        </div>
+        <p className="py-16 text-center text-sm text-stone-500">
+          Profile not found.
+        </p>
       </AppShell>
     );
   }
 
+  const displayName = profile.username?.trim() || "user";
+
   return (
     <AppShell
-      title={viewingOwn ? "Your profile" : `@${profile.username}`}
+      title={viewingOwn ? "Your profile" : `@${displayName}`}
       subtitle={profile.city || undefined}
-    >
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div
-          className="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-sm sm:p-8"
-        >
-          <div className="flex flex-col items-center text-center">
-            <div
-              className="flex size-28 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-5xl font-bold text-white shadow-md"
+      action={
+        viewingOwn ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/onboarding?edit=1&next=/profile")}
+              className="rounded-full px-4 py-2 text-sm font-semibold text-stone-600 hover:text-coral"
             >
-              {profile.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              ) : (
-                profile.username?.charAt(0).toUpperCase()
-              )}
-            </div>
-
-            <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-navy">
-              @{profile.username}
-            </h1>
-
-            {profile.city && (
-              <p className="mt-1 flex items-center gap-1 text-sm font-medium text-stone-600">
-                <span aria-hidden>📍</span>
-                {profile.city}
-              </p>
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/create-activity")}
+              className="rounded-full bg-coral px-4 py-2 text-sm font-bold text-white hover:bg-coral-hover"
+            >
+              + Create
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => router.push("/feed")}
+            className="rounded-full px-4 py-2 text-sm font-semibold text-stone-600 hover:text-coral"
+          >
+            Feed
+          </button>
+        )
+      }
+    >
+      <div className="space-y-8">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+          <div
+            className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-2xl font-bold text-white"
+          >
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt=""
+                className="size-full object-cover"
+              />
+            ) : (
+              displayName.charAt(0).toUpperCase()
             )}
-
-            {profile.bio && (
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-stone-600">
+          </div>
+          <div className="min-w-0">
+            <p className="text-xl font-extrabold text-navy">@{displayName}</p>
+            {profile.bio ? (
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-stone-600">
                 {profile.bio}
               </p>
-            )}
-
-            <p className="mt-3 text-xs text-stone-400">
-              Member since {formatMemberSince(profile.created_at)}
-            </p>
+            ) : null}
+            {profile.interests?.length > 0 ? (
+              <p className="mt-3 text-sm text-stone-500">
+                {profile.interests.join(" · ")}
+              </p>
+            ) : null}
           </div>
-
-          {profile.interests && profile.interests.length > 0 && (
-            <div className="mt-6 border-t border-stone-100 pt-6">
-              <h2 className="text-center text-xs font-bold uppercase tracking-wide text-stone-500">
-                Interests
-              </h2>
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {profile.interests.map((interest, idx) => (
-                  <span
-                    key={idx}
-                    className="rounded-full bg-coral-50 px-4 py-2 text-sm font-semibold text-coral"
-                  >
-                    {interest}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div>
           <h2 className="text-lg font-extrabold text-navy">
-            {viewingOwn ? "Your plans" : `Plans by @${profile.username}`}
+            {viewingOwn ? "Your plans" : "Plans"}
           </h2>
-          <p className="mt-1 text-sm text-stone-500">
-            Same cards as the feed — upcoming and past activities.
-          </p>
 
           {activities.length === 0 ? (
-            <div
-              className="mt-6 rounded-3xl border border-dashed border-stone-200 bg-stone-50/80 px-6 py-12 text-center"
-            >
-              <p className="text-3xl" aria-hidden>📭</p>
-              <p className="mt-2 font-semibold text-stone-800">
-                {viewingOwn ? "No plans yet" : "No public plans yet"}
-              </p>
-              {viewingOwn && (
-                <button
-                  type="button"
-                  onClick={() => router.push("/create-activity")}
-                  className="mt-4 rounded-full bg-coral px-6 py-2.5 text-sm font-bold text-white hover:bg-coral-hover"
-                >
-                  Plan something
-                </button>
-              )}
-            </div>
+            <p className="mt-4 text-sm text-stone-500">
+              {viewingOwn
+                ? "Nothing here yet — create a plan from the feed."
+                : "No plans yet."}
+            </p>
           ) : (
             <div
-              className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
             >
               {activities.map((activity) => {
                 const upcoming = isUpcoming(activity.activity_date);
@@ -249,16 +214,6 @@ function ProfileContent() {
             </div>
           )}
         </div>
-
-        {!viewingOwn && (
-          <button
-            type="button"
-            onClick={() => router.push("/feed")}
-            className="w-full rounded-full border border-stone-200 bg-white py-3 text-sm font-bold text-stone-800 shadow-sm hover:border-coral-100 hover:text-coral"
-          >
-            Back to feed
-          </button>
-        )}
       </div>
     </AppShell>
   );

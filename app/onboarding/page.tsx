@@ -44,7 +44,9 @@ function OnboardingPageContent() {
         return;
       }
 
-      if (isProfileComplete(profile)) {
+      const editMode = searchParams.get("edit") === "1";
+
+      if (isProfileComplete(profile) && !editMode) {
         router.replace(safeNextPath(searchParams.get("next"), "/feed"));
         return;
       }
@@ -131,6 +133,8 @@ function OnboardingPageContent() {
     }
   };
 
+  const editMode = searchParams.get("edit") === "1";
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-stone-50">
@@ -142,8 +146,10 @@ function OnboardingPageContent() {
   return (
     <AppShell
       headerAlign="center"
-      title="Set up your profile"
-      subtitle="Help others get to know you"
+      title={editMode ? "Edit profile" : "Set up your profile"}
+      subtitle={
+        editMode ? "Update how you show up on Outzy" : "Help others get to know you"
+      }
     >
       <div className="mx-auto max-w-xl">
         {/* Form */}
