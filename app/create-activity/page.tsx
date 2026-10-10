@@ -95,7 +95,7 @@ function CreateActivityPageContent() {
       const { profile, error: profileError } = await fetchUserProfile(user.id);
 
       if (profileError) {
-        console.error("Could not load profile:", profileError.message);
+
         setError("Could not verify your profile. Try again or check Supabase RLS.");
         setLoading(false);
         return;
@@ -146,7 +146,7 @@ function CreateActivityPageContent() {
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
 
-    // Validation
+ 
     if (!formData.title.trim()) {
       setError("Please add an activity title");
       return;
@@ -213,19 +213,17 @@ function CreateActivityPageContent() {
       const { error: dbError } = await supabase.from("activities").insert(payload);
 
       if (dbError) {
-        console.error("DB Error:", dbError);
+        
         setError("Failed to create activity. Try again.");
         setSubmitting(false);
         return;
       }
 
       setSuccess(true);
-      // Redirect after short delay
       setTimeout(() => {
-        router.push("/");
+        router.push("/feed");
       }, 1500);
     } catch (err) {
-      console.error("Error:", err);
       setError("Something went wrong.");
     } finally {
       setSubmitting(false);

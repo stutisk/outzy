@@ -150,7 +150,7 @@ export function SiteNavbar() {
               disabled={authLoading}
               className={pillPrimary}
             >
-              {authLoading ? "…" : "Get early access"}
+              {authLoading ? "Getting early access..." : "Get early access"}
             </button>
           )}
         </div>

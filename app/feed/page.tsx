@@ -25,13 +25,11 @@ const FeedActivitiesMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div
-        className="flex h-[min(55vh,420px)] items-center justify-center rounded-3xl border border-stone-200 bg-stone-50 text-sm text-stone-500"
-      >
+      <div className="flex h-[min(55vh,420px)] items-center justify-center rounded-3xl border border-stone-200 bg-stone-50 text-sm text-stone-500">
         Loading map…
       </div>
     ),
-  }
+  },
 );
 
 interface Activity {
@@ -134,7 +132,7 @@ function haversineKm(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -159,7 +157,7 @@ function isUpcoming(dateStr: string) {
 
 function activityDistanceKm(
   activity: Activity,
-  userLocation: UserLocation | null
+  userLocation: UserLocation | null,
 ): number | null {
   if (
     !userLocation ||
@@ -174,7 +172,7 @@ function activityDistanceKm(
     userLocation.latitude,
     userLocation.longitude,
     activity.latitude,
-    activity.longitude
+    activity.longitude,
   );
 }
 
@@ -212,7 +210,10 @@ function NearYouChip({ status }: { status: GeoStatus }) {
 
   if (status === "unavailable") {
     return (
-      <span className={`${base} bg-amber-50 text-amber-900 ring-amber-200/80`} role="status">
+      <span
+        className={`${base} bg-amber-50 text-amber-900 ring-amber-200/80`}
+        role="status"
+      >
         📍 Location unavailable
       </span>
     );
@@ -256,7 +257,7 @@ function FeedPageContent() {
 
   const [showModal, setShowModal] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-    null
+    null,
   );
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
@@ -267,7 +268,7 @@ function FeedPageContent() {
     string | null
   >(null);
   const [processingRequest, setProcessingRequest] = useState<string | null>(
-    null
+    null,
   );
   const [myJoinByActivity, setMyJoinByActivity] = useState<
     Record<string, MyJoinState>
@@ -278,7 +279,7 @@ function FeedPageContent() {
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatConversationId, setChatConversationId] = useState<string | null>(
-    null
+    null,
   );
   const openChatModal = (conversationId: string) => {
     setChatConversationId(conversationId);
@@ -313,7 +314,7 @@ function FeedPageContent() {
         enableHighAccuracy: false,
         timeout: 15_000,
         maximumAge: 0,
-      }
+      },
     );
   }, []);
 
@@ -330,7 +331,7 @@ function FeedPageContent() {
       }
 
       const { profile, error: profileError } = await fetchUserProfile(
-        authUser.id
+        authUser.id,
       );
       if (profileError) {
         console.error("Could not load profile:", profileError.message);
@@ -374,7 +375,7 @@ function FeedPageContent() {
 
         const userIds = [...new Set(activitiesData.map((a) => a.user_id))];
         const needsProfileFetch = activitiesData.some(
-          (a) => !hostFromRow(a)?.username
+          (a) => !hostFromRow(a)?.username,
         );
 
         let profileMap = new Map<string, NonNullable<Activity["host"]>>();
@@ -386,7 +387,10 @@ function FeedPageContent() {
             .in("id", userIds);
 
           profileMap = new Map(
-            (profiles ?? []).map((p) => [p.id, p as NonNullable<Activity["host"]>])
+            (profiles ?? []).map((p) => [
+              p.id,
+              p as NonNullable<Activity["host"]>,
+            ]),
           );
         }
 
@@ -398,7 +402,7 @@ function FeedPageContent() {
               ...activity,
               host: hostFromJoin ?? profileMap.get(activity.user_id),
             };
-          })
+          }),
         );
       } else {
         setActivities([]);
@@ -489,8 +493,7 @@ function FeedPageContent() {
     loadJoinRequestMeta();
   }, [user, activities]);
 
-  const isOwnActivity = (activityUserId: string) =>
-    user?.id === activityUserId;
+  const isOwnActivity = (activityUserId: string) => user?.id === activityUserId;
 
   const chipCategories = useMemo(() => {
     const chip = CATEGORY_CHIPS.find((c) => c.id === categoryChip);
@@ -537,7 +540,7 @@ function FeedPageContent() {
     });
 
     const upcomingCount = pool.filter((a) =>
-      isUpcoming(a.activity_date)
+      isUpcoming(a.activity_date),
     ).length;
     const pastCount = pool.length - upcomingCount;
 
@@ -570,7 +573,7 @@ function FeedPageContent() {
           a.latitude != null &&
           a.longitude != null &&
           !Number.isNaN(a.latitude) &&
-          !Number.isNaN(a.longitude)
+          !Number.isNaN(a.longitude),
       )
       .map((a) => ({
         id: a.id,
@@ -585,7 +588,7 @@ function FeedPageContent() {
 
   const visibleList = useMemo(
     () => flatList.slice(0, listPage * FEED_PAGE_SIZE),
-    [flatList, listPage]
+    [flatList, listPage],
   );
   const hasMoreActivities = visibleList.length < flatList.length;
   const remainingCount = flatList.length - visibleList.length;
@@ -601,9 +604,8 @@ function FeedPageContent() {
   };
 
   const totalPendingRequests = useMemo(
-    () =>
-      Object.values(pendingCountByActivity).reduce((sum, n) => sum + n, 0),
-    [pendingCountByActivity]
+    () => Object.values(pendingCountByActivity).reduce((sum, n) => sum + n, 0),
+    [pendingCountByActivity],
   );
 
   const handleSendRequest = async () => {
@@ -642,7 +644,7 @@ function FeedPageContent() {
         alert(
           error.message.includes("activity_requests")
             ? "Could not send — make sure join requests are set up in Supabase (run the latest migration)."
-            : "Failed to send request. Please try again."
+            : "Failed to send request. Please try again.",
         );
       } else {
         setMyJoinByActivity((prev) => ({
@@ -697,16 +699,14 @@ function FeedPageContent() {
             activities?: { title: string } | { title: string }[] | null;
           };
           const act = row.activities;
-          const activityTitle = Array.isArray(act)
-            ? act[0]?.title
-            : act?.title;
+          const activityTitle = Array.isArray(act) ? act[0]?.title : act?.title;
           const { activities: _a, ...rest } = row;
           return {
             ...rest,
             requester: profileMap.get(r.user_id),
             activity: activityTitle ? { title: activityTitle } : undefined,
           };
-        })
+        }),
       );
     } else {
       setRequests([]);
@@ -726,7 +726,7 @@ function FeedPageContent() {
 
   const handleRequest = async (
     requestId: string,
-    action: "accepted" | "rejected"
+    action: "accepted" | "rejected",
   ) => {
     setProcessingRequest(requestId);
 
@@ -745,12 +745,7 @@ function FeedPageContent() {
         console.error("Error updating request:", error);
         alert("Failed to update request. Please try again.");
       } else {
-        if (
-          action === "accepted" &&
-          requestRow &&
-          activityRow &&
-          user
-        ) {
+        if (action === "accepted" && requestRow && activityRow && user) {
           const hostId = user.id;
           let conversationId: string | null = null;
           let chatError: Error | null = null;
@@ -759,7 +754,7 @@ function FeedPageContent() {
             requestId,
             requestRow.activity_id,
             hostId,
-            requestRow.user_id
+            requestRow.user_id,
           );
           conversationId = created.conversationId;
           chatError = created.error;
@@ -768,7 +763,7 @@ function FeedPageContent() {
             const backfill = await openChatForAcceptedJoin(
               requestRow.activity_id,
               requestRow.user_id,
-              requestId
+              requestId,
             );
             conversationId = backfill.conversationId;
             chatError = backfill.error ?? chatError;
@@ -777,7 +772,7 @@ function FeedPageContent() {
           if (chatError) {
             console.error(chatError);
             alert(
-              "Request accepted, but chat could not start. Run supabase/migrations/20260328170000_conversations_messages.sql and 20260328180000_chat_grants_and_backfill_rpc.sql in Supabase, then try Open chat on the card."
+              "Request accepted, but chat could not start. Run supabase/migrations/20260328170000_conversations_messages.sql and 20260328180000_chat_grants_and_backfill_rpc.sql in Supabase, then try Open chat on the card.",
             );
           }
           if (conversationId) {
@@ -826,9 +821,6 @@ function FeedPageContent() {
         <header className="space-y-2 pt-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-coral">
-                Feed
-              </p>
               <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-[2rem] sm:leading-tight">
                 Plans happening near you
               </h1>
@@ -845,15 +837,6 @@ function FeedPageContent() {
             </button>
           </div>
         </header>
-
-        <div>
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-stone-800">
-            Filters
-          </h2>
-          <p className="mt-0.5 text-xs text-stone-500">
-            Who you see, list or map, and category
-          </p>
-        </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="inline-flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm">
@@ -903,9 +886,7 @@ function FeedPageContent() {
               type="button"
               onClick={() => setViewMode("map")}
               className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-                viewMode === "map"
-                  ? "bg-coral-50 text-coral"
-                  : "text-stone-500"
+                viewMode === "map" ? "bg-coral-50 text-coral" : "text-stone-500"
               }`}
             >
               Map
@@ -947,15 +928,21 @@ function FeedPageContent() {
           ))}
         </div>
 
-        <div>
-          <h2 className="text-sm font-extrabold text-stone-800">When</h2>
-        </div>
+       
         <div className="flex flex-wrap gap-2">
           {(
             [
-              { id: "upcoming" as const, label: "Upcoming", n: counts.upcoming },
+              {
+                id: "upcoming" as const,
+                label: "Upcoming",
+                n: counts.upcoming,
+              },
               { id: "past" as const, label: "Past", n: counts.past },
-              { id: "all" as const, label: "All", n: counts.upcoming + counts.past },
+              {
+                id: "all" as const,
+                label: "All",
+                n: counts.upcoming + counts.past,
+              },
             ] as const
           ).map(({ id, label, n }) => (
             <button
@@ -973,23 +960,21 @@ function FeedPageContent() {
           ))}
         </div>
 
-        <div
-          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl  px-3 py-2.5 "
-        >
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl  px-3 py-2.5 ">
           <NearYouChip status={geoStatus} />
-          <p className="text-xs text-stone-500">
-            {geoStatus === "success" && activeTab === "others" && whenFilter !== "past"
+          {/* <p className="text-xs text-stone-500">
+            {geoStatus === "success" &&
+            activeTab === "others" &&
+            whenFilter !== "past"
               ? "Sorted closest first"
               : viewMode === "map"
                 ? "Map: upcoming with a pin only"
                 : `${counts.showing} showing`}
-          </p>
+          </p> */}
         </div>
 
         {categorySlug ? (
-          <div
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-coral-50 px-3 py-2 text-sm"
-          >
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-coral-50 px-3 py-2 text-sm">
             <p className="text-stone-800">
               Filter:{" "}
               <span className="font-bold text-coral">
@@ -1020,10 +1005,10 @@ function FeedPageContent() {
             />
           </div>
         ) : flatList.length === 0 ? (
-          <div
-            className="rounded-3xl border border-dashed border-coral-100 bg-white px-6 py-16 text-center shadow-sm"
-          >
-            <p className="text-3xl" aria-hidden>👀</p>
+          <div className="rounded-3xl border border-dashed border-coral-100 bg-white px-6 py-16 text-center shadow-sm">
+            <p className="text-3xl" aria-hidden>
+              👀
+            </p>
             <p className="mt-3 text-lg font-bold text-stone-900">
               {showEmptyNearby
                 ? "No plans nearby... yet 👀"
@@ -1048,13 +1033,12 @@ function FeedPageContent() {
               <div>
                 <h2 className="text-lg font-extrabold text-navy">Activities</h2>
                 <p className="text-sm text-stone-600">
-                  Tap <span className="font-semibold">I&apos;m in</span> to request a spot
+                  Tap <span className="font-semibold">I&apos;m in</span> to
+                  request a spot
                 </p>
               </div>
             </div>
-            <div
-              className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            >
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {visibleList.map((activity) => {
                 const upcoming = isUpcoming(activity.activity_date);
                 const km = activityDistanceKm(activity, userLocation);
@@ -1067,9 +1051,7 @@ function FeedPageContent() {
                     upcoming={upcoming}
                     showHost={activeTab === "others"}
                     distanceLabel={distanceLabel}
-                    joinStatus={
-                      myJoinByActivity[activity.id]?.status ?? "none"
-                    }
+                    joinStatus={myJoinByActivity[activity.id]?.status ?? "none"}
                     pendingRequestCount={
                       pendingCountByActivity[activity.id] ?? 0
                     }
@@ -1089,7 +1071,7 @@ function FeedPageContent() {
                               await openChatForAcceptedJoin(
                                 activity.id,
                                 user.id,
-                                join?.requestId
+                                join?.requestId,
                               );
                             if (conversationId) {
                               setMyJoinByActivity((prev) => ({
@@ -1107,7 +1089,7 @@ function FeedPageContent() {
                               console.error(chatErr);
                               alert(
                                 chatErr?.message ??
-                                  "Chat is not available yet. Make sure the host accepted your request and chat migrations are applied in Supabase."
+                                  "Chat is not available yet. Make sure the host accepted your request and chat migrations are applied in Supabase.",
                               );
                             }
                           }
@@ -1118,9 +1100,7 @@ function FeedPageContent() {
               })}
             </div>
 
-            <div
-              className="flex flex-col items-center gap-3 border-t border-stone-200/80 pt-6"
-            >
+            <div className="flex flex-col items-center gap-3 border-t border-stone-200/80 pt-6">
               <p className="text-sm text-stone-500">
                 Showing{" "}
                 <span className="font-semibold text-stone-800">
@@ -1208,7 +1188,9 @@ function FeedPageContent() {
         }}
         title="Join requests"
         subtitle={
-          requestsActivityFilter ? "For this plan only" : "Review messages and accept or decline"
+          requestsActivityFilter
+            ? "For this plan only"
+            : "Review messages and accept or decline"
         }
         footer={
           <button
@@ -1245,16 +1227,12 @@ function FeedPageContent() {
                     if (request.requester?.id) {
                       setShowRequestsModal(false);
                       setRequestsActivityFilter(null);
-                      router.push(
-                        `/profile?userId=${request.requester.id}`
-                      );
+                      router.push(`/profile?userId=${request.requester.id}`);
                     }
                   }}
                   className="flex w-full items-center gap-3 rounded-xl border border-white bg-white p-2.5 text-left transition-colors hover:border-coral-100 hover:bg-coral-50/40"
                 >
-                  <span
-                    className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-sm font-bold text-white"
-                  >
+                  <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-sm font-bold text-white">
                     {request.requester?.avatar_url ? (
                       <img
                         src={request.requester.avatar_url}
@@ -1262,8 +1240,8 @@ function FeedPageContent() {
                         className="size-full object-cover"
                       />
                     ) : (
-                      request.requester?.username?.charAt(0).toUpperCase() ??
-                      "?"
+                      (request.requester?.username?.charAt(0).toUpperCase() ??
+                      "?")
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
