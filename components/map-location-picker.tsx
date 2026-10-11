@@ -11,6 +11,8 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { AppModal } from "@/components/app-modal";
+import { Button } from "@/components/ui/button";
+import { fieldInputClass } from "@/components/ui/field";
 
 export type MapLocationConfirmPayload = {
   latitude: number;
@@ -27,7 +29,7 @@ const DEFAULT_ZOOM = 12;
 
 const pinIcon = L.divIcon({
   className: "",
-  html: `<div style="width:28px;height:28px;margin-left:-14px;margin-top:-28px;background:#0d9488;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`,
+  html: `<div style="width:28px;height:28px;margin-left:-14px;margin-top:-28px;background:#0E7C6B;border:2px solid #FAF8F3;transform:rotate(-45deg)"></div>`,
   iconSize: [28, 28],
   iconAnchor: [14, 28],
 });
@@ -225,21 +227,18 @@ export function MapLocationPicker({
       contentClassName="px-4 py-3"
       footer={
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-50"
-          >
+          <Button variant="ghost" fullWidth showArrow={false} onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            fullWidth
+            showArrow={false}
             onClick={handleConfirm}
             disabled={confirming}
-            className="flex-1 rounded-full bg-coral py-2.5 text-sm font-bold text-white hover:bg-coral-hover disabled:opacity-60"
+            loading={confirming}
           >
-            {confirming ? "Confirming…" : "Confirm location"}
-          </button>
+            Confirm location
+          </Button>
         </div>
       }
     >
@@ -251,32 +250,34 @@ export function MapLocationPicker({
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Search for a place (optional)"
-              className="min-w-0 flex-1 rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral-100"
+              className={fieldInputClass}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              showArrow={false}
               onClick={handleSearch}
               disabled={searching}
-              className="shrink-0 rounded-lg bg-stone-100 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-200 disabled:opacity-60"
+              className="shrink-0"
             >
               {searching ? "…" : "Search"}
-            </button>
+            </Button>
           </div>
           {searchError && (
-            <p className="text-xs text-amber-800">{searchError}</p>
+            <p className="text-xs text-ink">{searchError}</p>
           )}
           {geoNotice && (
             <p className="text-xs text-amber-800">{geoNotice}</p>
           )}
           {mapError && (
-            <p className="text-xs text-red-600">{mapError}</p>
+            <p className="text-xs text-accent">{mapError}</p>
           )}
           {confirmError && (
             <p className="text-xs text-red-600">{confirmError}</p>
           )}
         </div>
 
-        <div className="relative min-h-[280px] overflow-hidden rounded-2xl border border-stone-200">
+        <div className="relative min-h-[280px] overflow-hidden border-hairline">
           <MapContainer
             center={[position.lat, position.lng]}
             zoom={zoom}

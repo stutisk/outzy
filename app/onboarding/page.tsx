@@ -3,7 +3,9 @@
 import { Suspense, useState, useEffect, type SubmitEventHandler } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { Spinner } from "@/components/spinner";
+import { Button } from "@/components/ui/button";
+import { Field, FormError, Input, Textarea } from "@/components/ui/field";
+import { PageLoadingScreen } from "@/components/ui/page-state";
 import { safeNextPath } from "@/lib/auth-nav";
 import { fetchUserProfile, isProfileComplete } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
@@ -136,11 +138,7 @@ function OnboardingPageContent() {
   const editMode = searchParams.get("edit") === "1";
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-stone-50">
-        <Spinner label="Setting up…" />
-      </main>
-    );
+    return <PageLoadingScreen label="Setting up…" />;
   }
 
   return (
@@ -153,107 +151,68 @@ function OnboardingPageContent() {
     >
       <div className="mx-auto max-w-xl">
         {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5"
-        >
-          {/* Username */}
-          <div>
-            <label htmlFor="username" className="block text-sm font-semibold text-slate-900 mb-2">
-              Username *
-            </label>
-            <input
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Field label="Username" htmlFor="username" required>
+            <Input
               id="username"
               name="username"
               type="text"
               value={formData.username}
               onChange={handleChange}
               placeholder="@yourname"
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
               autoFocus
             />
-          </div>
+          </Field>
 
-          {/* Bio */}
-          <div>
-            <label htmlFor=
-            "bio" className="block text-sm font-semibold text-slate-900 mb-2">
-              About You 
-            </label>
-            <textarea
+          <Field label="About you" htmlFor="bio">
+            <Textarea
               id="bio"
               name="bio"
               value={formData.bio}
               onChange={handleChange}
               placeholder="What do you love doing? Any hobbies?"
               rows={3}
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all resize-none"
             />
-          </div>
+          </Field>
 
-          {/* Interests */}
-          <div>
-            <label htmlFor="interests" className="block text-sm font-semibold text-slate-900 mb-2">
-              Interests
-            </label>
-            <input
+          <Field
+            label="Interests"
+            htmlFor="interests"
+            hint="Comma separated"
+          >
+            <Input
               id="interests"
               name="interests"
               type="text"
               value={formData.interests}
               onChange={handleChange}
-              placeholder="hiking, coffee, photography (comma separated)"
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
+              placeholder="hiking, coffee, photography"
             />
-          </div>
+          </Field>
 
-          {/* City */}
-          <div>
-            <label htmlFor="city" className="block text-sm font-semibold text-slate-900 mb-2">
-              City
-            </label>
-            <input
+          <Field label="City" htmlFor="city">
+            <Input
               id="city"
               name="city"
               type="text"
               value={formData.city}
               onChange={handleChange}
-              placeholder="Kullu"
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
+              placeholder="Your city"
             />
-          </div>
+          </Field>
 
-     
+          <FormError message={error} />
 
-    
-          {error && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-600 px-4 py-3 rounded-xl font-medium">
-              {error}
-            </div>
-          )}
-
-          {/* Submit */}
-          <button
+          <Button
             type="submit"
+            fullWidth
+            loading={submitting}
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-coral py-4 text-lg font-semibold text-white transition-colors hover:bg-coral-hover disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {submitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                Continue
-                <span>→</span>
-              </>
-            )}
-          </button>
+            {submitting ? "Saving…" : "Continue"}
+          </Button>
 
-          <p className="text-center text-slate-400 text-xs">
-            * Required
-          </p>
+          <p className="text-center text-xs text-muted">* Required</p>
         </form>
       </div>
     </AppShell>
@@ -262,13 +221,7 @@ function OnboardingPageContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-stone-50">
-          <Spinner label="Setting up…" />
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingScreen label="Setting up…" />}>
       <OnboardingPageContent />
     </Suspense>
   );

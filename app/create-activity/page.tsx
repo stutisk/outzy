@@ -4,7 +4,15 @@ import dynamic from "next/dynamic";
 import { Suspense, useState, useEffect, type SubmitEventHandler } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { Spinner } from "@/components/spinner";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FormError,
+  Input,
+  Select,
+  Textarea,
+} from "@/components/ui/field";
+import { PageLoadingScreen } from "@/components/ui/page-state";
 import type { MapLocationConfirmPayload } from "@/components/map-location-picker";
 import type { ActivityInsert } from "@/lib/activities";
 import { safeNextPath, signInWithGoogleNext } from "@/lib/auth-nav";
@@ -231,21 +239,15 @@ function CreateActivityPageContent() {
   };
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-stone-50">
-        <Spinner />
-      </main>
-    );
+    return <PageLoadingScreen label="Loading…" />;
   }
 
   if (success) {
     return (
       <AppShell title="Create activity">
-        <div className="max-w-xl py-16 text-center">
-          <h2 className="text-lg font-semibold text-stone-900">
-            Activity created
-          </h2>
-          <p className="mt-1 text-sm text-stone-500">Redirecting…</p>
+        <div className="max-w-xl border-hairline bg-surface py-16 text-center">
+          <h2 className="font-display text-xl text-ink">Plan created</h2>
+          <p className="type-body-sm mt-2">Redirecting…</p>
         </div>
       </AppShell>
     );
@@ -258,84 +260,60 @@ function CreateActivityPageContent() {
       subtitle="Post something for others to join"
     >
       <div className="mx-auto max-w-xl">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Title */}
-          <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-semibold text-slate-900 mb-2"
-            >
-              Activity Title *
-            </label>
-            <input
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Field label="Plan title" htmlFor="title" required>
+            <Input
               id="title"
               name="title"
               type="text"
               value={formData.title}
               onChange={handleChange}
-              // placeholder="e.g., "
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all placeholder:text-slate-400 text-black"
               autoFocus
             />
-          </div>
+          </Field>
 
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-semibold text-slate-900 mb-2"
-            >
-              Description *
-            </label>
-            <textarea
+          <Field label="Description" htmlFor="description" required>
+            <Textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Yoo brooo? What's the plan?"
+              placeholder="What's the plan?"
               rows={3}
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all resize-none"
             />
-          </div>
+          </Field>
 
-          {/* Location */}
-          <div>
-            <label
-              htmlFor="location"
-              className="block text-sm font-semibold text-slate-900 mb-2"
-            >
-              Location *
-            </label>
-            <input
+          <Field
+            label="Location"
+            htmlFor="location"
+            required
+            hint="Landmark or area — exact address shared after confirmation"
+          >
+            <Input
               id="location"
               name="location"
               type="text"
               value={formData.location}
               onChange={handleChange}
-              // placeholder="e.g., Twin Peaks, San Francisco"
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              fullWidth
+              showArrow={false}
+              className="mt-2"
               onClick={() => setMapPickerOpen(true)}
-              className="mt-2 w-full rounded-full border border-stone-200 bg-white py-2.5 text-sm font-medium text-coral transition-colors hover:border-coral-100 hover:bg-coral-50"
             >
               Select on map
-            </button>
-            {mapPinned && (
-              <div
-                className="mt-3 rounded-2xl border border-coral-100 bg-coral-50 px-4 py-3 text-sm text-navy"
-              >
-                <p className="font-medium">📍 Selected location</p>
+            </Button>
+            {mapPinned ? (
+              <div className="mt-3 border-hairline bg-highlight/30 px-4 py-3 text-sm text-ink">
+                <p className="font-medium">Selected location</p>
                 <p className="mt-1 font-semibold">{mapPinned.primaryLine}</p>
-                <p className="text-stone-600">{mapPinned.secondaryLine}</p>
+                <p className="text-muted">{mapPinned.secondaryLine}</p>
               </div>
-            )}
-            <p className="text-xs text-slate-500 mt-1">
-              Type a landmark or use the map — exact address shared after
-              confirmation
-            </p>
-          </div>
+            ) : null}
+          </Field>
 
           <MapLocationPicker
             open={mapPickerOpen}
@@ -343,78 +321,48 @@ function CreateActivityPageContent() {
             onConfirm={handleMapConfirm}
           />
 
-          {/* Date & Time */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="date"
-                className="block text-sm font-semibold text-slate-900 mb-2"
-              >
-                Date *
-              </label>
-              <input
+            <Field label="Date" htmlFor="date" required>
+              <Input
                 id="date"
                 name="date"
                 type="date"
                 value={formData.date}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
               />
-            </div>
-            <div>
-              <label
-                htmlFor="time"
-                className="block text-sm font-semibold text-slate-900 mb-2"
-              >
-                Time *
-              </label>
-              <input
+            </Field>
+            <Field label="Time" htmlFor="time" required>
+              <Input
                 id="time"
                 name="time"
                 type="time"
                 value={formData.time}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all"
               />
-            </div>
+            </Field>
           </div>
 
-          {/* Max People & Category */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="maxPeople"
-                className="block text-sm font-semibold text-slate-900 mb-2"
-              >
-                Max People
-              </label>
-              <select
+            <Field label="Max people" htmlFor="maxPeople">
+              <Select
                 id="maxPeople"
                 name="maxPeople"
                 value={formData.maxPeople}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all bg-white"
               >
                 {[2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20].map((num) => (
                   <option key={num} value={num}>
                     {num} people
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="category"
-                className="block text-sm font-semibold text-slate-900 mb-2"
-              >
-                Category *
-              </label>
-              <select
+              </Select>
+            </Field>
+            <Field label="Category" htmlFor="category" required>
+              <Select
                 id="category"
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all bg-white"
               >
                 <option value="">Select</option>
                 {CATEGORIES.map((cat) => (
@@ -422,39 +370,17 @@ function CreateActivityPageContent() {
                     {cat.label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-600 px-4 py-3 rounded-xl font-medium">
-              {error}
-            </div>
-          )}
+          <FormError message={error} />
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-coral py-4 text-lg font-semibold text-white transition-colors hover:bg-coral-hover disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {submitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                Create Activity
-                <span>→</span>
-              </>
-            )}
-          </button>
+          <Button type="submit" fullWidth loading={submitting} disabled={submitting}>
+            {submitting ? "Creating…" : "Create plan"}
+          </Button>
 
-          <p className="text-center text-slate-400 text-xs">
-            * Required fields
-          </p>
+          <p className="text-center text-xs text-muted">* Required fields</p>
         </form>
       </div>
     </AppShell>
@@ -463,13 +389,7 @@ function CreateActivityPageContent() {
 
 export default function CreateActivityPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-stone-50">
-          <Spinner />
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingScreen />}>
       <CreateActivityPageContent />
     </Suspense>
   );

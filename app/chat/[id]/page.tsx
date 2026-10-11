@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import { Spinner } from "@/components/spinner";
+import { PageLoadingScreen } from "@/components/ui/page-state";
 
 function ChatRedirect() {
   const params = useParams();
@@ -18,22 +18,12 @@ function ChatRedirect() {
     }
   }, [conversationId, router]);
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-      <Spinner label="Opening chat…" />
-    </main>
-  );
+  return <PageLoadingScreen label="Opening chat…" />;
 }
 
 export default function ChatPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-          <Spinner />
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingScreen label="Opening chat…" />}>
       <ChatRedirect />
     </Suspense>
   );

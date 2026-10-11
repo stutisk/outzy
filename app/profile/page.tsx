@@ -4,7 +4,12 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ActivityCard } from "@/components/activity-card";
-import { Spinner } from "@/components/spinner";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  EmptyState,
+  PageLoadingScreen,
+} from "@/components/ui/page-state";
 import { supabase } from "@/lib/supabase";
 
 interface UserProfile {
@@ -84,19 +89,18 @@ function ProfileContent() {
   }, [router, userId]);
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-        <Spinner label="Loading profile…" />
-      </main>
-    );
+    return <PageLoadingScreen label="Loading profile…" />;
   }
 
   if (!profile) {
     return (
       <AppShell title="Profile">
-        <p className="py-16 text-center text-sm text-stone-500">
-          Profile not found.
-        </p>
+        <EmptyState
+          title="Profile not found"
+          description="This user may not exist or you may not have access."
+          actionLabel="Back to feed"
+          onAction={() => router.push("/feed")}
+        />
       </AppShell>
     );
   }
@@ -110,56 +114,41 @@ function ProfileContent() {
       action={
         viewingOwn ? (
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              showArrow={false}
               onClick={() => router.push("/onboarding?edit=1&next=/profile")}
-              className="rounded-full px-4 py-2 text-sm font-semibold text-stone-600 hover:text-coral"
             >
               Edit
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              showArrow={false}
               onClick={() => router.push("/create-activity")}
-              className="rounded-full bg-coral px-4 py-2 text-sm font-bold text-white hover:bg-coral-hover"
             >
-              + Create
-            </button>
+              Create plan
+            </Button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => router.push("/feed")}
-            className="rounded-full px-4 py-2 text-sm font-semibold text-stone-600 hover:text-coral"
-          >
+          <Button variant="secondary" showArrow={false} onClick={() => router.push("/feed")}>
             Feed
-          </button>
+          </Button>
         )
       }
     >
       <div className="space-y-8">
-        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-          <div
-            className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-2xl font-bold text-white"
-          >
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt=""
-                className="size-full object-cover"
-              />
-            ) : (
-              displayName.charAt(0).toUpperCase()
-            )}
-          </div>
+        <div className="flex flex-col items-center gap-4 border-hairline-b bg-surface p-6 text-center sm:flex-row sm:items-start sm:text-left">
+          <Avatar
+            src={profile.avatar_url}
+            name={displayName}
+            size="lg"
+          />
           <div className="min-w-0">
-            <p className="text-xl font-extrabold text-navy">@{displayName}</p>
+            <p className="font-display text-2xl text-ink">@{displayName}</p>
             {profile.bio ? (
-              <p className="mt-2 max-w-lg text-sm leading-relaxed text-stone-600">
-                {profile.bio}
-              </p>
+              <p className="type-body-sm mt-2 max-w-lg">{profile.bio}</p>
             ) : null}
             {profile.interests?.length > 0 ? (
-              <p className="mt-3 text-sm text-stone-500">
+              <p className="mt-3 text-sm text-muted">
                 {profile.interests.join(" · ")}
               </p>
             ) : null}
@@ -167,16 +156,22 @@ function ProfileContent() {
         </div>
 
         <div>
-          <h2 className="text-lg font-extrabold text-navy">
+          <h2 className="type-page-title text-xl">
             {viewingOwn ? "Your plans" : "Plans"}
           </h2>
 
           {activities.length === 0 ? (
-            <p className="mt-4 text-sm text-stone-500">
-              {viewingOwn
-                ? "Nothing here yet — create a plan from the feed."
-                : "No plans yet."}
-            </p>
+            <EmptyState
+              className="mt-6"
+              title={viewingOwn ? "No plans yet" : "Nothing posted"}
+              description={
+                viewingOwn
+                  ? "Create a plan and invite people from Discover."
+                  : "This host hasn't posted a plan yet."
+              }
+              actionLabel={viewingOwn ? "Create plan" : undefined}
+              onAction={viewingOwn ? () => router.push("/create-activity") : undefined}
+            />
           ) : (
             <div
               className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
@@ -221,13 +216,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-          <Spinner />
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingScreen label="Loading profile…" />}>
       <ProfileContent />
     </Suspense>
   );

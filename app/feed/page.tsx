@@ -10,6 +10,11 @@ import {
   ActivityCard,
   type JoinRequestStatus,
 } from "@/components/activity-card";
+import { Button } from "@/components/ui/button";
+import { FilterChip } from "@/components/ui/filter-chip";
+import { fieldInputClass } from "@/components/ui/field";
+import { EmptyState, PageLoadingScreen } from "@/components/ui/page-state";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Spinner } from "@/components/spinner";
 import { getCategoryLabel } from "@/lib/categories";
 import {
@@ -25,7 +30,7 @@ const FeedActivitiesMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[min(55vh,420px)] items-center justify-center rounded-3xl border border-stone-200 bg-stone-50 text-sm text-stone-500">
+      <div className="flex h-[min(55vh,420px)] items-center justify-center border-hairline bg-background text-sm text-muted">
         Loading map…
       </div>
     ),
@@ -103,27 +108,27 @@ const CATEGORY_CHIPS: {
   categories: string[];
 }[] = [
   { id: "all", label: "All", categories: [] },
-  { id: "food", label: "☕ Food", categories: ["food", "coffee"] },
+  { id: "food", label: "Food", categories: ["food", "coffee"] },
   {
     id: "fitness",
-    label: "🏋️ Fitness",
+    label: "Fitness",
     categories: ["running", "yoga", "cycling"],
   },
-  { id: "gaming", label: "🎮 Gaming", categories: ["gaming"] },
+  { id: "gaming", label: "Gaming", categories: ["gaming"] },
   {
     id: "creative",
-    label: "🎨 Creative",
+    label: "Creative",
     categories: ["art", "photography", "dance"],
   },
   {
     id: "outdoors",
-    label: "🌄 Outdoors",
+    label: "Outdoors",
     categories: ["hiking", "beaches", "cycling"],
   },
-  { id: "movies", label: "🎬 Movies", categories: [] },
+  { id: "movies", label: "Movies", categories: [] },
   {
     id: "social",
-    label: "💬 Social",
+    label: "Social",
     categories: ["nightlife", "coffee", "food"],
   },
 ];
@@ -178,17 +183,17 @@ function activityDistanceKm(
 
 function NearYouChip({ status }: { status: GeoStatus }) {
   const base =
-    "inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset";
+    "inline-flex max-w-full items-center gap-1.5 border border-ink/14 px-3 py-1.5 text-xs font-medium";
 
   if (status === "loading") {
     return (
       <span
-        className={`${base} bg-stone-50 text-stone-600 ring-stone-200`}
+        className={`${base} bg-background text-muted`}
         role="status"
         aria-live="polite"
       >
         <span
-          className="size-3 shrink-0 animate-spin rounded-full border-2 border-stone-200 border-t-coral"
+          className="size-3 shrink-0 animate-spin border-2 border-ink/14 border-t-accent"
           aria-hidden
         />
         Locating…
@@ -199,32 +204,26 @@ function NearYouChip({ status }: { status: GeoStatus }) {
   if (status === "denied") {
     return (
       <span
-        className={`${base} bg-amber-50 text-amber-900 ring-amber-200/80`}
+        className={`${base} bg-highlight/35 text-ink`}
         role="status"
         title="Enable location in browser settings for distance sorting"
       >
-        📍 Location off
+        Location off
       </span>
     );
   }
 
   if (status === "unavailable") {
     return (
-      <span
-        className={`${base} bg-amber-50 text-amber-900 ring-amber-200/80`}
-        role="status"
-      >
-        📍 Location unavailable
+      <span className={`${base} bg-highlight/35 text-ink`} role="status">
+        Location unavailable
       </span>
     );
   }
 
   return (
-    <span
-      className={`${base} bg-teal-50 text-teal-900 ring-teal-200/70`}
-      role="status"
-    >
-      📍 Near you first
+    <span className={`${base} bg-surface text-ink`} role="status">
+      Sorted near you
     </span>
   );
 }
@@ -803,11 +802,7 @@ function FeedPageContent() {
   };
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-linear-to-b from-coral-50/80 to-[#faf9f7]">
-        <Spinner label="Loading the vibe…" />
-      </main>
-    );
+    return <PageLoadingScreen label="Loading plans…" />;
   }
 
   const showEmptyNearby =
@@ -821,110 +816,75 @@ function FeedPageContent() {
         <header className="space-y-2 pt-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-[2rem] sm:leading-tight">
+              <h1 className="type-page-title mt-1">
                 Plans happening near you
               </h1>
-              <p className="mt-2 max-w-lg text-sm font-medium leading-relaxed text-stone-600 sm:text-base">
-                Browse activities, filter by vibe, and join something filmy IRL.
+              <p className="type-body-sm mt-2 max-w-lg sm:text-base">
+                Browse activities, filter by vibe, and join something IRL.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => router.push("/create-activity")}
-              className="shrink-0 rounded-full bg-coral px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-coral/25 transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              + Plan something
-            </button>
+            <Button showArrow={false} onClick={() => router.push("/create-activity")}>
+              Plan something
+            </Button>
           </div>
         </header>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab("others")}
-              className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                activeTab === "others"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-500 hover:text-stone-800"
-              }`}
-            >
-              Nearby {counts.others > 0 && `(${counts.others})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("mine")}
-              className={`relative rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                activeTab === "mine"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-500 hover:text-stone-800"
-              }`}
-            >
-              Yours {counts.mine > 0 && `(${counts.mine})`}
-              {totalPendingRequests > 0 && activeTab !== "mine" && (
-                <span
-                  className="absolute -right-1 -top-1 size-2.5 rounded-full bg-coral ring-2 ring-white"
-                  aria-hidden
-                />
-              )}
-            </button>
-          </div>
+          <SegmentedControl
+            aria-label="Feed filter"
+            value={activeTab}
+            onChange={setActiveTab}
+            options={[
+              {
+                value: "others",
+                label: `Nearby${counts.others > 0 ? ` (${counts.others})` : ""}`,
+              },
+              {
+                value: "mine",
+                label: `Yours${counts.mine > 0 ? ` (${counts.mine})` : ""}${
+                  totalPendingRequests > 0 && activeTab !== "mine" ? " •" : ""
+                }`,
+              },
+            ]}
+          />
 
-          <div className="flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-                viewMode === "list"
-                  ? "bg-coral-50 text-coral"
-                  : "text-stone-500"
-              }`}
-            >
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("map")}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-                viewMode === "map" ? "bg-coral-50 text-coral" : "text-stone-500"
-              }`}
-            >
-              Map
-            </button>
-          </div>
+          <SegmentedControl
+            aria-label="View mode"
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: "list", label: "List" },
+              { value: "map", label: "Map" },
+            ]}
+          />
         </div>
 
         {activeTab === "mine" && totalPendingRequests > 0 && (
           <button
             type="button"
             onClick={() => openRequestsModal()}
-            className="flex w-full items-center justify-between rounded-2xl border border-coral-100 bg-coral-50 px-4 py-3 text-left transition-colors hover:bg-coral-50/80"
+            className="flex w-full items-center justify-between border border-accent/30 bg-highlight/35 px-4 py-3 text-left transition-colors hover:bg-highlight/50"
           >
-            <span className="text-sm font-semibold text-stone-800">
+            <span className="text-sm font-semibold text-ink">
               {totalPendingRequests} join request
               {totalPendingRequests === 1 ? "" : "s"} waiting
             </span>
-            <span className="text-sm font-bold text-coral">Review →</span>
+            <span className="text-sm font-bold text-accent">Review →</span>
           </button>
         )}
 
         <div>
-          <h2 className="text-sm font-extrabold text-stone-800">Category</h2>
+          <h2 className="text-sm font-extrabold text-ink">Category</h2>
         </div>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
           {CATEGORY_CHIPS.map((chip) => (
-            <button
+            <FilterChip
               key={chip.id}
-              type="button"
+              active={categoryChip === chip.id}
               onClick={() => setCategoryChip(chip.id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                categoryChip === chip.id
-                  ? "bg-stone-900 text-white shadow-md"
-                  : "bg-white text-stone-600 ring-1 ring-stone-200 hover:ring-coral-100 hover:text-coral"
-              }`}
             >
               {chip.label}
-            </button>
+            </FilterChip>
           ))}
         </div>
 
@@ -949,10 +909,10 @@ function FeedPageContent() {
               key={id}
               type="button"
               onClick={() => setWhenFilter(id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`border px-3 py-1.5 text-xs font-medium transition-colors ${
                 whenFilter === id
-                  ? "bg-coral text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "border-ink bg-ink text-surface"
+                  : "border-ink/14 bg-background text-muted hover:bg-surface"
               }`}
             >
               {label} · {n}
@@ -962,7 +922,7 @@ function FeedPageContent() {
 
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl  px-3 py-2.5 ">
           <NearYouChip status={geoStatus} />
-          {/* <p className="text-xs text-stone-500">
+          {/* <p className="text-xs text-muted">
             {geoStatus === "success" &&
             activeTab === "others" &&
             whenFilter !== "past"
@@ -974,10 +934,10 @@ function FeedPageContent() {
         </div>
 
         {categorySlug ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-coral-50 px-3 py-2 text-sm">
-            <p className="text-stone-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 border border-accent/30 bg-highlight/35 px-3 py-2 text-sm">
+            <p className="text-ink">
               Filter:{" "}
-              <span className="font-bold text-coral">
+              <span className="font-bold text-accent">
                 {getCategoryLabel(categorySlug)}
               </span>
             </p>
@@ -987,7 +947,7 @@ function FeedPageContent() {
                 setCategorySlug(null);
                 router.replace("/feed");
               }}
-              className="text-xs font-semibold text-coral hover:text-coral-hover"
+              className="text-xs font-semibold text-accent hover:text-accent-hover"
             >
               Clear ×
             </button>
@@ -996,7 +956,7 @@ function FeedPageContent() {
 
         {viewMode === "map" ? (
           <div className="space-y-2">
-            <p className="text-center text-xs text-stone-500">
+            <p className="text-center text-xs text-muted">
               Upcoming activities with a location — tap a pin for details.
             </p>
             <FeedActivitiesMap
@@ -1005,34 +965,26 @@ function FeedPageContent() {
             />
           </div>
         ) : flatList.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-coral-100 bg-white px-6 py-16 text-center shadow-sm">
-            <p className="text-3xl" aria-hidden>
-              👀
-            </p>
-            <p className="mt-3 text-lg font-bold text-stone-900">
-              {showEmptyNearby
-                ? "No plans nearby... yet 👀"
-                : "Nothing here right now"}
-            </p>
-            <p className="mt-2 text-sm text-stone-500">
-              {showEmptyNearby
-                ? "Be the first to drop a plan — your friends might join."
-                : "Try another filter or check Past / All."}
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push("/create-activity")}
-              className="mt-6 rounded-full bg-coral px-6 py-3 text-sm font-bold text-white shadow-lg shadow-coral/25 transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Create Activity
-            </button>
-          </div>
+          <EmptyState
+            title={
+              showEmptyNearby
+                ? "No plans nearby yet"
+                : "Nothing here right now"
+            }
+            description={
+              showEmptyNearby
+                ? "Be the first to drop a plan — others might join."
+                : "Try another filter or check Past / All."
+            }
+            actionLabel="Create plan"
+            onAction={() => router.push("/create-activity")}
+          />
         ) : (
           <div className="space-y-8">
             <div className="flex items-end justify-between gap-2">
               <div>
-                <h2 className="text-lg font-extrabold text-navy">Activities</h2>
-                <p className="text-sm text-stone-600">
+                <h2 className="text-lg font-extrabold text-ink">Activities</h2>
+                <p className="text-sm text-muted">
                   Tap <span className="font-semibold">I&apos;m in</span> to
                   request a spot
                 </p>
@@ -1100,14 +1052,14 @@ function FeedPageContent() {
               })}
             </div>
 
-            <div className="flex flex-col items-center gap-3 border-t border-stone-200/80 pt-6">
-              <p className="text-sm text-stone-500">
+            <div className="flex flex-col items-center gap-3 border-t border-ink/14/80 pt-6">
+              <p className="text-sm text-muted">
                 Showing{" "}
-                <span className="font-semibold text-stone-800">
+                <span className="font-semibold text-ink">
                   {visibleList.length}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-stone-800">
+                <span className="font-semibold text-ink">
                   {flatList.length}
                 </span>{" "}
                 activities
@@ -1116,11 +1068,11 @@ function FeedPageContent() {
                 <button
                   type="button"
                   onClick={() => setListPage((p) => p + 1)}
-                  className="pill-interactive rounded-full border border-stone-200 bg-white px-8 py-3 text-sm font-bold text-stone-800 shadow-sm transition-colors hover:border-coral-100 hover:text-coral"
+                  className="border border-ink/14 bg-surface px-8 py-3 text-sm font-medium text-ink transition-colors hover:border-accent/30 hover:text-accent"
                 >
                   Load more
                   {remainingCount > 0 && (
-                    <span className="ml-1.5 font-medium text-stone-500">
+                    <span className="ml-1.5 font-medium text-muted">
                       (+{Math.min(remainingCount, FEED_PAGE_SIZE)} more)
                     </span>
                   )}
@@ -1129,7 +1081,7 @@ function FeedPageContent() {
                 <button
                   type="button"
                   onClick={() => setListPage(1)}
-                  className="text-sm font-semibold text-coral hover:text-coral-hover"
+                  className="text-sm font-semibold text-accent hover:text-accent-hover"
                 >
                   Back to top ↑
                 </button>
@@ -1150,25 +1102,27 @@ function FeedPageContent() {
         }
         footer={
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              fullWidth
+              showArrow={false}
               onClick={() => setShowModal(false)}
-              className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-50"
             >
               Cancel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              fullWidth
+              showArrow={false}
               onClick={handleSendRequest}
               disabled={sendingRequest || !requestMessage.trim()}
-              className="flex-1 rounded-full bg-coral py-2.5 text-sm font-bold text-white disabled:opacity-60"
+              loading={sendingRequest}
             >
-              {sendingRequest ? "Sending…" : "Send request"}
-            </button>
+              Send request
+            </Button>
           </div>
         }
       >
-        <label className="mb-2 block text-sm font-semibold text-stone-700">
+        <label className="mb-2 block text-sm font-semibold text-ink">
           Your message
         </label>
         <textarea
@@ -1176,7 +1130,7 @@ function FeedPageContent() {
           onChange={(e) => setRequestMessage(e.target.value)}
           placeholder="Hey! I'd love to join — …"
           rows={4}
-          className="w-full rounded-2xl border border-stone-200 p-3 text-sm focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral-100"
+          className={fieldInputClass}
         />
       </AppModal>
 
@@ -1193,20 +1147,21 @@ function FeedPageContent() {
             : "Review messages and accept or decline"
         }
         footer={
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            fullWidth
+            showArrow={false}
             onClick={() => {
               setShowRequestsModal(false);
               setRequestsActivityFilter(null);
             }}
-            className="w-full rounded-2xl border border-stone-200 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-50"
           >
             Close
-          </button>
+          </Button>
         }
       >
         {visibleHostRequests.length === 0 ? (
-          <p className="py-8 text-center text-sm text-stone-500">
+          <p className="py-8 text-center text-sm text-muted">
             No pending requests
           </p>
         ) : (
@@ -1214,10 +1169,10 @@ function FeedPageContent() {
             {visibleHostRequests.map((request) => (
               <div
                 key={request.id}
-                className="rounded-2xl border border-stone-200/80 bg-stone-50 p-4"
+                className="border border-ink/14 bg-background p-4"
               >
                 {request.activity?.title && (
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-coral">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">
                     {request.activity.title}
                   </p>
                 )}
@@ -1230,9 +1185,9 @@ function FeedPageContent() {
                       router.push(`/profile?userId=${request.requester.id}`);
                     }
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white bg-white p-2.5 text-left transition-colors hover:border-coral-100 hover:bg-coral-50/40"
+                  className="flex w-full items-center gap-3 border border-ink/14 bg-surface p-2.5 text-left transition-colors hover:bg-background"
                 >
-                  <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-sm font-bold text-white">
+                  <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden border-hairline bg-accent/15 text-sm font-medium text-accent">
                     {request.requester?.avatar_url ? (
                       <img
                         src={request.requester.avatar_url}
@@ -1245,40 +1200,42 @@ function FeedPageContent() {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-navy">
+                    <span className="block text-sm font-bold text-ink">
                       @{request.requester?.username || "unknown"}
                     </span>
-                    <span className="block text-xs font-semibold text-coral">
+                    <span className="block text-xs font-semibold text-accent">
                       View profile →
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs text-stone-400">
+                  <span className="shrink-0 text-xs text-muted">
                     {new Date(request.created_at).toLocaleDateString()}
                   </span>
                 </button>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-stone-500">
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-muted">
                   Their message
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-stone-800">
+                <p className="mt-1 text-sm leading-relaxed text-ink">
                   {request.message}
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    showArrow={false}
+                    fullWidth
                     onClick={() => handleRequest(request.id, "accepted")}
                     disabled={processingRequest === request.id}
-                    className="flex-1 rounded-full bg-coral py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                    loading={processingRequest === request.id}
                   >
                     Accept
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    showArrow={false}
+                    fullWidth
                     onClick={() => handleRequest(request.id, "rejected")}
                     disabled={processingRequest === request.id}
-                    className="flex-1 rounded-full border border-stone-200 py-2.5 text-sm font-semibold text-stone-600 disabled:opacity-60"
                   >
                     Reject
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -1300,13 +1257,7 @@ function FeedPageContent() {
 
 export default function FeedPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-          <Spinner />
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingScreen label="Loading plans…" />}>
       <FeedPageContent />
     </Suspense>
   );

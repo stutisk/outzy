@@ -2,6 +2,9 @@
 
 import { Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { fieldInputClass } from "@/components/ui/field";
+import { InlineLoading } from "@/components/ui/page-state";
 import { Spinner } from "@/components/spinner";
 import {
   markConversationRead,
@@ -22,6 +25,8 @@ function appendMessageUnique(prev: MessageRow[], msg: MessageRow): MessageRow[] 
 
 export type ChatPanelMeta = {
   activityTitle: string;
+  activityId: string;
+  otherUserId: string;
   otherUsername: string;
   otherAvatarUrl: string | null;
 };
@@ -98,7 +103,7 @@ export function ChatPanel({
         await Promise.all([
           supabase
             .from("activities")
-            .select("title")
+            .select("id, title")
             .eq("id", row.activity_id)
             .maybeSingle(),
           supabase
@@ -115,6 +120,8 @@ export function ChatPanel({
 
       const meta = {
         activityTitle: activity?.title ?? "Plan",
+        activityId: row.activity_id,
+        otherUserId: otherId,
         otherUsername: otherUser?.username ?? "user",
         otherAvatarUrl: otherUser?.avatar_url ?? null,
       };
@@ -191,7 +198,7 @@ export function ChatPanel({
 
   if (!conversation || !userId) {
     return (
-      <p className="py-8 text-center text-sm text-stone-600">
+      <p className="border-hairline bg-surface py-8 text-center text-sm text-muted">
         {error || "Chat unavailable."}
       </p>
     );
@@ -201,7 +208,7 @@ export function ChatPanel({
     <form
       className={`flex shrink-0 items-end gap-2 ${
         fillHeight
-          ? "border-t border-stone-200/90 bg-white px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3"
+          ? "border-hairline-t bg-surface px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3"
           : "mt-3"
       }`}
       onSubmit={(e) => {
@@ -213,16 +220,17 @@ export function ChatPanel({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder="Write a message…"
-        className="min-w-0 flex-1 rounded-2xl border border-stone-200/90 bg-stone-50 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-coral focus:bg-white focus:outline-none focus:ring-2 focus:ring-coral-100"
+        className={fieldInputClass}
       />
-      <button
+      <Button
         type="submit"
         disabled={sending || !draft.trim()}
         aria-label="Send message"
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-coral text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+        showArrow={false}
+        className="!px-3 !py-3"
       >
         <Send className="size-[18px]" strokeWidth={2.25} />
-      </button>
+      </Button>
     </form>
   );
 
@@ -232,16 +240,16 @@ export function ChatPanel({
       className={`flex flex-col gap-0.5 ${mine ? "items-end" : "items-start"}`}
     >
       <div
-        className={`max-w-[92%] px-3.5 py-2 text-[15px] leading-relaxed ${
+        className={`max-w-[92%] border-hairline px-3.5 py-2 text-[15px] leading-relaxed ${
           mine
-            ? "rounded-2xl rounded-br-md bg-coral text-white shadow-sm"
-            : "rounded-2xl rounded-bl-md bg-white text-stone-900 shadow-sm ring-1 ring-stone-200/70"
+            ? "bg-ink text-surface"
+            : "bg-surface text-ink"
         }`}
       >
         {m.body}
       </div>
       <span
-        className={`px-1 text-[10px] font-medium tabular-nums text-stone-400 ${mine ? "text-right" : "text-left"}`}
+        className={`px-1 text-[10px] font-medium tabular-nums text-muted ${mine ? "text-right" : "text-left"}`}
       >
         {formatMessageTime(m.created_at)}
       </span>
@@ -256,10 +264,10 @@ export function ChatPanel({
         >
           {messages.length === 0 ? (
             <div className="mx-auto max-w-[240px] py-14 text-center">
-              <p className="text-sm font-medium text-stone-600">
+              <p className="text-sm font-medium text-ink">
                 Start the conversation
               </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-stone-500">
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
                 Share timing, meeting spot, or what to bring for the plan.
               </p>
             </div>
@@ -270,7 +278,7 @@ export function ChatPanel({
         </div>
 
         {error ? (
-          <p className="shrink-0 px-4 pb-1 text-xs font-medium text-red-600">
+          <p className="shrink-0 px-4 pb-1 text-xs font-medium text-accent">
             {error}
           </p>
         ) : null}
@@ -283,10 +291,10 @@ export function ChatPanel({
   return (
     <div className="flex flex-col">
       <div
-        className="flex max-h-[min(50vh,400px)] min-h-55 flex-col gap-2.5 overflow-y-auto rounded-2xl bg-stone-50/80 p-3 ring-1 ring-stone-200/80"
+        className="flex max-h-[min(50vh,400px)] min-h-55 flex-col gap-2.5 overflow-y-auto border-hairline bg-background p-3"
       >
         {messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-stone-500">
+          <p className="py-10 text-center text-sm text-muted">
             No messages yet — coordinate the plan here.
           </p>
         ) : (
@@ -296,7 +304,7 @@ export function ChatPanel({
       </div>
 
       {error && (
-        <p className="mt-2 text-xs font-medium text-red-600">{error}</p>
+        <p className="mt-2 text-xs font-medium text-accent">{error}</p>
       )}
 
       {composer}

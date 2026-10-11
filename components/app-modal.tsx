@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/cn";
 
 type AppModalProps = {
   open: boolean;
@@ -9,13 +10,10 @@ type AppModalProps = {
   title: string;
   subtitle?: string;
   children: ReactNode;
-  /** sm = 28rem, md = 32rem, lg = 42rem */
   size?: "sm" | "md" | "lg";
   footer?: ReactNode;
   contentClassName?: string;
-  /** e.g. z-[60] when stacking above other modals */
   overlayClassName?: string;
-  /** Edge-to-edge viewport height (e.g. chat) */
   fullHeight?: boolean;
 };
 
@@ -62,34 +60,35 @@ export function AppModal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 flex overflow-hidden ${fullHeight ? "flex-col p-0" : "items-center justify-center p-4"} ${overlayClassName}`}
+      className={cn(
+        "fixed inset-0 flex overflow-hidden bg-ink/50",
+        fullHeight ? "flex-col p-0" : "items-center justify-center p-4",
+        overlayClassName,
+      )}
       role="presentation"
     >
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-modal-title"
-        className={`relative flex w-full flex-col overflow-hidden bg-white ${
+        className={cn(
+          "relative flex w-full flex-col overflow-hidden border-hairline bg-surface",
           fullHeight
-            ? "h-dvh max-h-dvh rounded-none border-0 shadow-none sm:mx-auto sm:max-w-lg sm:border-x sm:border-stone-200"
-            : `max-h-[min(85vh,720px)] rounded-3xl border border-stone-200 shadow-xl ${sizeClass[size]}`
-        }`}
+            ? "h-dvh max-h-dvh sm:mx-auto sm:max-w-lg sm:border-x"
+            : cn("max-h-[min(85vh,720px)]", sizeClass[size]),
+        )}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-100 px-4 py-4 sm:px-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-hairline-b px-4 py-4 sm:px-6">
           <div className="min-w-0 flex-1">
             <h2
               id="app-modal-title"
-              className="text-lg font-bold text-stone-900"
+              className="font-display text-xl text-ink"
             >
               {title}
             </h2>
             {subtitle ? (
-              <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+              <p className="type-body-sm mt-1">{subtitle}</p>
             ) : null}
           </div>
           {fullHeight ? (
@@ -97,28 +96,30 @@ export function AppModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 rounded-full p-2 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900"
+              className="shrink-0 px-2 py-1 text-2xl leading-none text-muted hover:text-ink"
             >
-              <span className="block text-xl leading-none" aria-hidden>
-                ×
-              </span>
+              <span aria-hidden>×</span>
             </button>
           ) : null}
         </div>
 
         <div
-          className={`min-h-0 overscroll-contain ${fullHeight ? "flex flex-1 flex-col overflow-hidden" : "flex-1 overflow-y-auto px-6 py-4"} ${contentClassName}`}
+          className={cn(
+            "min-h-0 overscroll-contain",
+            fullHeight
+              ? "flex flex-1 flex-col overflow-hidden"
+              : "flex-1 overflow-y-auto px-6 py-4",
+            contentClassName,
+          )}
         >
           {children}
         </div>
 
         {footer ? (
-          <div className="shrink-0 border-t border-stone-100 px-6 py-4">
-            {footer}
-          </div>
+          <div className="shrink-0 border-hairline-t px-6 py-4">{footer}</div>
         ) : null}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

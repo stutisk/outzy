@@ -4,7 +4,19 @@ import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type SubmitEventHandler } from "react";
 import { AppShell } from "@/components/app-shell";
-import { Spinner } from "@/components/spinner";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FormError,
+  Input,
+  Select,
+  Textarea,
+  fieldInputClass,
+} from "@/components/ui/field";
+import {
+  EmptyState,
+  PageLoadingScreen,
+} from "@/components/ui/page-state";
 import type { MapLocationConfirmPayload } from "@/components/map-location-picker";
 import { geocodeLocation } from "@/lib/geocode-client";
 import { getCategoryLabel } from "@/lib/categories";
@@ -191,26 +203,18 @@ function ActivityDetailContent() {
   };
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-        <Spinner label="Loading plan…" />
-      </main>
-    );
+    return <PageLoadingScreen label="Loading plan…" />;
   }
 
   if (!activity) {
     return (
       <AppShell title="Plan not found">
-        <div className="py-16 text-center">
-          <p className="text-stone-600">This activity doesn&apos;t exist or you can&apos;t view it.</p>
-          <button
-            type="button"
-            onClick={() => router.push("/feed")}
-            className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white"
-          >
-            Back to feed
-          </button>
-        </div>
+        <EmptyState
+          title="Plan not found"
+          description="This activity doesn't exist or you can't view it."
+          actionLabel="Back to feed"
+          onAction={() => router.push("/feed")}
+        />
       </AppShell>
     );
   }
@@ -234,79 +238,68 @@ function ActivityDetailContent() {
       subtitle={editing ? undefined : getCategoryLabel(activity.category)}
       action={
         isHost && !editing ? (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-full bg-coral px-4 py-2 text-sm font-bold text-white"
-          >
+          <Button showArrow={false} onClick={() => setEditing(true)}>
             Edit
-          </button>
+          </Button>
         ) : undefined
       }
     >
       <div className="mx-auto max-w-xl">
         {editing ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-stone-800">
-                Title
-              </label>
-              <input
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Field label="Title" htmlFor="edit-title">
+              <Input
+                id="edit-title"
                 name="title"
                 value={formData.title}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, title: e.target.value }))
                 }
-                className="w-full rounded-2xl border border-stone-200 p-3 text-sm"
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-stone-800">
-                Description
-              </label>
-              <textarea
+            </Field>
+            <Field label="Description" htmlFor="edit-description">
+              <Textarea
+                id="edit-description"
                 name="description"
                 rows={3}
                 value={formData.description}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, description: e.target.value }))
                 }
-                className="w-full rounded-2xl border border-stone-200 p-3 text-sm"
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-stone-800">
-                Location
-              </label>
-              <input
+            </Field>
+            <Field label="Location" htmlFor="edit-location">
+              <Input
+                id="edit-location"
                 value={formData.location}
                 onChange={(e) => {
                   setMapPinned(null);
                   setFormData((p) => ({ ...p, location: e.target.value }));
                 }}
-                className="w-full rounded-2xl border border-stone-200 p-3 text-sm"
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                className="mt-2 !px-0"
+                showArrow={false}
                 onClick={() => setMapPickerOpen(true)}
-                className="mt-2 text-sm font-semibold text-coral"
               >
                 Select on map
-              </button>
-            </div>
+              </Button>
+            </Field>
             <MapLocationPicker
               open={mapPickerOpen}
               onClose={() => setMapPickerOpen(false)}
               onConfirm={handleMapConfirm}
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, date: e.target.value }))
                 }
-                className="rounded-2xl border border-stone-200 p-3 text-sm"
+                className={fieldInputClass}
               />
               <input
                 type="time"
@@ -314,82 +307,79 @@ function ActivityDetailContent() {
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, time: e.target.value }))
                 }
-                className="rounded-2xl border border-stone-200 p-3 text-sm"
+                className={fieldInputClass}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <select
+            <div className="grid grid-cols-2 gap-4">
+              <Select
                 value={formData.maxPeople}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, maxPeople: e.target.value }))
                 }
-                className="rounded-2xl border border-stone-200 p-3 text-sm"
               >
                 {[2, 4, 6, 8, 10, 12, 15, 20].map((n) => (
                   <option key={n} value={n}>{n} people</option>
                 ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={formData.category}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, category: e.target.value }))
                 }
-                className="rounded-2xl border border-stone-200 p-3 text-sm"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
-            {error && (
-              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </p>
-            )}
+            <FormError message={error} />
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                fullWidth
+                showArrow={false}
                 onClick={() => {
                   setEditing(false);
                   setError("");
                 }}
-                className="flex-1 rounded-2xl border border-stone-200 py-3 text-sm font-semibold"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                fullWidth
+                showArrow={false}
+                loading={submitting}
                 disabled={submitting}
-                className="flex-1 rounded-full bg-coral py-3 text-sm font-bold text-white disabled:opacity-60"
               >
                 {submitting ? "Saving…" : "Save"}
-              </button>
+              </Button>
             </div>
           </form>
         ) : (
-          <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold text-stone-500">{when}</p>
-            <p className="text-base leading-relaxed text-stone-700">
-              {activity.description}
-            </p>
+          <div className="space-y-5 border-hairline bg-surface p-6">
+            <p className="type-eyebrow text-accent">{when}</p>
+            <p className="type-body text-ink">{activity.description}</p>
             <a
               href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-sm font-bold text-coral hover:underline"
+              className="text-sm font-medium text-accent underline underline-offset-4"
             >
               {activity.city} — open in maps
             </a>
-            <p className="text-sm text-stone-600">
+            <p className="text-sm text-muted">
               Up to {activity.max_people} people
             </p>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              fullWidth
+              showArrow={false}
               onClick={() => router.push("/feed")}
-              className="w-full rounded-full border border-stone-200 py-3 text-sm font-semibold text-stone-800"
             >
               Back to feed
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -399,13 +389,7 @@ function ActivityDetailContent() {
 
 export default function ActivityDetailPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#faf9f7]">
-          <Spinner />
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingScreen label="Loading plan…" />}>
       <ActivityDetailContent />
     </Suspense>
   );

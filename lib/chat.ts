@@ -240,6 +240,7 @@ export type ConversationListItem = {
   id: string;
   activity_id: string;
   activity_title: string;
+  other_user_id: string;
   other_username: string;
   other_avatar_url: string | null;
   created_at: string;
@@ -319,6 +320,7 @@ export async function listMyConversations(
       id: c.id,
       activity_id: c.activity_id,
       activity_title: titleMap.get(c.activity_id) ?? "Plan",
+      other_user_id: otherId,
       other_username: other?.username ?? "user",
       other_avatar_url: other?.avatar_url ?? null,
       created_at: c.created_at,

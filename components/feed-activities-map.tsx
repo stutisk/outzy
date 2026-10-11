@@ -20,7 +20,7 @@ type UserLocation = { latitude: number; longitude: number };
 
 const markerIcon = L.divIcon({
   className: "",
-  html: `<div style="width:22px;height:22px;margin-left:-11px;margin-top:-22px;background:#0d9488;border:2px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 5px rgba(0,0,0,0.2)"></div>`,
+  html: `<div style="width:22px;height:22px;margin-left:-11px;margin-top:-22px;background:#0E7C6B;border:2px solid #FAF8F3;transform:rotate(-45deg)"></div>`,
   iconSize: [22, 22],
   iconAnchor: [11, 22],
 });
@@ -80,11 +80,10 @@ export function FeedActivitiesMap({
   if (activities.length === 0) {
     return (
       <div
-        className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-stone-200 bg-stone-50/80 px-6 py-12 text-center"
+        className="flex min-h-[320px] flex-col items-center justify-center border border-dashed border-ink/14 bg-background px-6 py-12 text-center"
       >
-        <p className="text-3xl" aria-hidden>🗺️</p>
-        <p className="mt-2 font-semibold text-stone-900">No upcoming pins yet</p>
-        <p className="mt-1 max-w-sm text-sm text-stone-500">
+        <p className="font-display text-xl text-ink">No upcoming pins yet</p>
+        <p className="mt-1 max-w-sm text-sm text-muted">
           Upcoming activities with a map location will show here.
         </p>
       </div>
@@ -92,7 +91,7 @@ export function FeedActivitiesMap({
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-stone-200 shadow-sm">
+    <div className="overflow-hidden border-hairline">
       <MapContainer
         center={center}
         zoom={12}
@@ -119,11 +118,11 @@ export function FeedActivitiesMap({
             icon={markerIcon}
           >
             <Popup>
-              <p className="text-xs font-medium text-stone-500">
+              <p className="text-xs font-medium text-muted">
                 {getCategoryLabel(a.category)}
               </p>
-              <p className="font-semibold text-stone-900">{a.title}</p>
-              <p className="text-xs text-stone-600">{a.city}</p>
+              <p className="font-semibold text-ink">{a.title}</p>
+              <p className="text-xs text-muted">{a.city}</p>
             </Popup>
           </Marker>
         ))}

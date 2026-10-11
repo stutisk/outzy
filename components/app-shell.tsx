@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { UnreadCountBadge } from "@/components/unread-count-badge";
 import { PAGE_CONTAINER } from "@/lib/layout";
 import { SiteNavbar } from "@/components/site-navbar";
+import { cn } from "@/lib/cn";
 import { useUnreadMessageCounts } from "@/lib/use-unread-messages";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
@@ -28,7 +29,6 @@ export function AppShell({
   title?: string;
   subtitle?: string;
   action?: React.ReactNode;
-  /** Center title/subtitle on md+ (e.g. narrow forms below) */
   headerAlign?: "start" | "center";
 }) {
   const pathname = usePathname();
@@ -52,41 +52,40 @@ export function AppShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#faf9f7] text-navy">
+    <div className="min-h-screen bg-background text-ink">
       <SiteNavbar />
 
       {(title || subtitle || action) && (
         <div
-          className={`${PAGE_CONTAINER} flex flex-wrap items-end gap-4 pt-8 pb-2 ${
+          className={cn(
+            `${PAGE_CONTAINER} flex flex-wrap items-end gap-4 border-hairline-b py-8`,
             headerAlign === "center" && !action
               ? "md:justify-center"
-              : "justify-between"
-          }`}
+              : "justify-between",
+          )}
         >
           <div
             className={
-              headerAlign === "center" ? "md:mx-auto md:max-w-xl md:text-center" : undefined
+              headerAlign === "center"
+                ? "md:mx-auto md:max-w-xl md:text-center"
+                : undefined
             }
           >
             {title ? (
-              <h1 className="text-xl font-semibold tracking-tight text-stone-900">
-                {title}
-              </h1>
+              <h1 className="type-page-title">{title}</h1>
             ) : null}
             {subtitle ? (
-              <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+              <p className="type-body-sm mt-2">{subtitle}</p>
             ) : null}
           </div>
           {action}
         </div>
       )}
 
-      <div className={`${PAGE_CONTAINER} animate-fade-up pb-24 sm:pb-12`}>
-        {children}
-      </div>
+      <div className={`${PAGE_CONTAINER} pb-24 pt-6 sm:pb-12`}>{children}</div>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 border-hairline-t bg-surface md:hidden"
         aria-label="Main"
       >
         <div className={`${PAGE_CONTAINER} flex justify-around py-2`}>
@@ -96,9 +95,10 @@ export function AppShell({
               <Link
                 key={href}
                 href={href}
-                className={`relative px-4 py-1 text-xs font-medium ${
-                  active ? "text-coral" : "text-stone-400"
-                }`}
+                className={cn(
+                  "relative px-3 py-1 text-xs font-medium",
+                  active ? "text-ink" : "text-muted",
+                )}
               >
                 {label}
                 {href === "/messages" && user ? (
