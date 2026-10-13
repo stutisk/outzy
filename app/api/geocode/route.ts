@@ -61,8 +61,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ latitude, longitude });
-  } catch (err) {
-    console.error("Geocode error:", err);
+  } catch {
     return NextResponse.json({ error: "Geocoding failed" }, { status: 500 });
   }
 }

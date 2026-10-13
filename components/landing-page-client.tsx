@@ -95,12 +95,10 @@ export function LandingPageClient({
         const { profile, error: profileError } = await fetchUserProfile(u.id);
 
         if (profileError) {
-          console.error("Could not load profile:", profileError.message);
         } else if (!isProfileComplete(profile)) {
           router.push("/onboarding");
         }
       } catch (error) {
-        console.error("Auth check failed:", error);
       } finally {
         setLoading(false);
       }
@@ -119,7 +117,7 @@ export function LandingPageClient({
     try {
       await signInWithGoogleNext(nextPath);
     } catch (error) {
-      console.error("Auth error:", error);
+      
       setAuthLoading(false);
     }
   };
@@ -146,30 +144,22 @@ export function LandingPageClient({
         >
           <div className="grid items-center gap-12 overflow-visible lg:grid-cols-2 lg:gap-16">
             <div className="text-center lg:text-left">
-              <p
-                className="mb-4 inline-flex animate-fade-up items-center gap-2 rounded-full border border-teal-100 bg-white/80 px-4 py-1.5 text-sm font-medium text-stone-600 shadow-sm backdrop-blur-sm"
-              >
+              <p className="mb-4 inline-flex animate-fade-up items-center gap-2 rounded-full border border-teal-100 bg-white/80 px-4 py-1.5 text-sm font-medium text-stone-600 shadow-sm backdrop-blur-sm">
                 <span className="size-2 rounded-full bg-coral animate-pulse" />
                 Your vibe, your people.
               </p>
-              <h1
-                className="animate-fade-up stagger-1 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl"
-              >
+              <h1 className="animate-fade-up stagger-1 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
                 Main character plans,{" "}
                 <span className="bg-linear-to-r from-teal-600 to-emerald-600 bg-clip-text text-transparent">
                   zero group-chat chaos.
                 </span>
               </h1>
-              <p
-                className="animate-fade-up stagger-2 mx-auto mt-6 max-w-lg text-lg leading-relaxed text-stone-600 lg:mx-0"
-              >
+              <p className="animate-fade-up stagger-2 mx-auto mt-6 max-w-lg text-lg leading-relaxed text-stone-600 lg:mx-0">
                 Find curated hangs, small groups, and plans that actually happen
-                — without the endless group chat spiral.
+                without the endless group chat spiral.
               </p>
 
-              <div
-                className="animate-fade-up stagger-3 mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start"
-              >
+              <div className="animate-fade-up stagger-3 mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
                 {user ? (
                   <>
                     <button
@@ -207,11 +197,11 @@ export function LandingPageClient({
                   </>
                 )}
               </div>
-              <p
+              {/* <p
                 className="animate-fade-up stagger-4 mt-8 text-center text-sm font-medium text-stone-600 lg:text-left"
               >
                 {trustCopy}
-              </p>
+              </p> */}
             </div>
 
             <div className="flex overflow-visible lg:min-h-[38rem] lg:items-center">
@@ -230,11 +220,12 @@ export function LandingPageClient({
         userId={userId}
       />
 
-      <section id="why-outzy" className={`${PAGE_CONTAINER} ${LANDING_SECTION_PY}`}>
+      <section
+        id="why-outzy"
+        className={`${PAGE_CONTAINER} ${LANDING_SECTION_PY}`}
+      >
         <RevealOnScroll>
-          <div
-            className="overflow-hidden rounded-3xl border border-black/10 bg-linear-to-br from-navy via-[#1a2332] to-[#0f3d35] px-6 py-10 md:px-10 md:py-12"
-          >
+          <div className="overflow-hidden rounded-3xl border border-black/10 bg-linear-to-br from-navy via-[#1a2332] to-[#0f3d35] px-6 py-10 md:px-10 md:py-12">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -242,17 +233,17 @@ export function LandingPageClient({
                 </p>
                 <h2 className="mt-3 text-3xl font-bold leading-tight text-white md:text-4xl">
                   Log off.{" "}
-                  <span className="bg-highlight px-1 text-navy">Go make lore.</span>
+                  <span className="bg-highlight px-1 text-navy">
+                    Go make lore.
+                  </span>
                 </h2>
                 <p className="mt-4 max-w-md text-stone-300">
-                  Built for people who want real plans with real humans — not
+                  Built for people who want real plans with real humans , not
                   another dead group chat.
                 </p>
                 <button
                   type="button"
-                  onClick={() =>
-                    user ? router.push("/feed") : login("/feed")
-                  }
+                  onClick={() => (user ? router.push("/feed") : login("/feed"))}
                   className={`mt-8 ${pillOutline}`}
                 >
                   Join the community →
@@ -264,7 +255,7 @@ export function LandingPageClient({
                   {
                     icon: Shield,
                     title: "Signed-in humans",
-                    desc: "Google sign-in — no throwaway accounts.",
+                    desc: "Google sign-in no throwaway accounts.",
                     tint: "bg-teal-500/15 text-teal-100",
                   },
                   {
@@ -307,9 +298,7 @@ export function LandingPageClient({
 
       <section className={`${PAGE_CONTAINER} ${LANDING_SECTION_PY}`}>
         <RevealOnScroll>
-          <div
-            className="rounded-3xl border border-black/10 bg-linear-to-br from-teal-600 via-teal-600 to-emerald-600 px-6 py-10 text-center text-white md:px-10 md:py-12"
-          >
+          <div className="rounded-3xl border border-black/10 bg-linear-to-br from-teal-600 via-teal-600 to-emerald-600 px-6 py-10 text-center text-white md:px-10 md:py-12">
             <p className="text-sm font-medium uppercase tracking-widest text-white/80">
               Your outside era starts now
             </p>

@@ -170,9 +170,9 @@ export function LandingHappeningWeek({ plans }: LandingHappeningWeekProps) {
       <RevealOnScroll>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            {/* <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
               This week near you
-            </p>
+            </p> */}
             <h2
               id="happening-week-heading"
               className="mt-2 text-2xl font-semibold tracking-tight text-navy md:text-3xl"

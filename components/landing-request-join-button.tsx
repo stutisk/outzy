@@ -96,7 +96,6 @@ export function LandingRequestJoinButton({
       });
 
       if (insertError) {
-        console.error("Landing join request:", insertError);
         setError("Could not send request. Try again.");
         setLoading(false);
         return;
@@ -104,8 +103,7 @@ export function LandingRequestJoinButton({
 
       setJoinState("pending");
       onJoinStateChange?.(plan.id, "pending");
-    } catch (e) {
-      console.error(e);
+    } catch {
       setError("Something went wrong.");
     } finally {
       setLoading(false);

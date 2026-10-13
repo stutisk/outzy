@@ -229,7 +229,6 @@ export async function getConversationForGuest(
     .maybeSingle();
 
   if (error) {
-    console.error("getConversationForGuest:", error.message);
     return null;
   }
 
@@ -253,7 +252,6 @@ export async function fetchUnreadMessageCounts(): Promise<{
   const { data, error } = await supabase.rpc("get_my_unread_counts");
 
   if (error) {
-    console.warn("get_my_unread_counts:", error.message);
     return { total: 0, byConversation: {} };
   }
 
@@ -271,12 +269,9 @@ export async function fetchUnreadMessageCounts(): Promise<{
 }
 
 export async function markConversationRead(conversationId: string): Promise<void> {
-  const { error } = await supabase.rpc("mark_conversation_read", {
+  await supabase.rpc("mark_conversation_read", {
     p_conversation_id: conversationId,
   });
-  if (error) {
-    console.warn("mark_conversation_read:", error.message);
-  }
 }
 
 export async function listMyConversations(

@@ -6,8 +6,7 @@ import type { WhenFilter } from "@/lib/feed-filters";
 import type { CategoryChipId } from "@/lib/feed-filters";
 
 type FeedFilterBarProps = {
-  search: string;
-  onSearchChange: (v: string) => void;
+ 
   categoryChip: CategoryChipId;
   onCategoryChip: (id: CategoryChipId) => void;
   chips: { id: CategoryChipId; label: string }[];
@@ -20,8 +19,7 @@ type FeedFilterBarProps = {
 };
 
 export function FeedFilterBar({
-  search,
-  onSearchChange,
+
   categoryChip,
   onCategoryChip,
   chips,
@@ -46,22 +44,10 @@ export function FeedFilterBar({
 
   return (
     <div
-      className="sticky top-[3.25rem] z-30 -mx-4 border-b border-stone-200/80 bg-[#faf9f7]/95 px-4 py-2 backdrop-blur-md sm:top-14 sm:mx-0 sm:rounded-2xl sm:border sm:py-1.5"
+      className="sticky top-[3.25rem] z-30 -mx-4  bg-[#faf9f7]/95 px-4 py-2 backdrop-blur-md "
     >
       <div className="flex h-12 items-center gap-2">
-        <label className="relative hidden min-w-0 flex-1 sm:flex">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400"
-            strokeWidth={1.5}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search plans…"
-            className="h-10 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral-100"
-          />
-        </label>
+       
 
         <div
           className="feed-filter-scroll relative flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto sm:flex-none sm:overflow-visible"
@@ -171,19 +157,7 @@ export function FeedFilterBar({
         </div>
       </div>
 
-      <label className="relative mt-2 flex sm:hidden">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400"
-          strokeWidth={1.5}
-        />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search plans…"
-          className="h-10 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm"
-        />
-      </label>
+     
     </div>
   );
 }

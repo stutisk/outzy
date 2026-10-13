@@ -60,8 +60,7 @@ export function SiteNavbar() {
           redirectTo: `${window.location.origin}/feed`,
         },
       });
-    } catch (error) {
-      console.error("Auth error:", error);
+    } catch {
       setAuthLoading(false);
     }
   };

@@ -5,7 +5,7 @@ const LINKS = [
   { href: "/feed", label: "Discover" },
   { href: "/create-activity", label: "Host a plan" },
   { href: "/#how-it-works", label: "How it works" },
-  { href: "mailto:hello@outzy.app", label: "Contact" },
+  { href: "mailto:stuti1720@gmail.com", label: "Contact" },
 ] as const;
 
 const linkClass =
@@ -13,7 +13,7 @@ const linkClass =
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-black/8 bg-[#faf9f7]">
+    <footer className="move-section bg-[#faf9f7]">
       <div
         className={`${PAGE_CONTAINER} flex flex-col items-center gap-4 py-5 sm:flex-row sm:justify-between sm:py-6`}
       >

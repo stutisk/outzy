@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test lib/activity-validation.test.mjs lib/activity-expiry.test.mjs lib/cover.test.mjs"
+    "test": "node --test lib/activity-validation.test.mjs lib/activity-expiry.test.mjs lib/cover.test.mjs lib/username-validation.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

@@ -85,7 +85,6 @@ async function loadUpcomingActivities(
     rows = withHosts.data as Record<string, unknown>[];
   } else {
     if (withHosts.error) {
-      console.error("getLandingPlans activities (join):", withHosts.error.message);
     }
     const plain = await supabase
       .from("activities")
@@ -97,7 +96,6 @@ async function loadUpcomingActivities(
       .limit(48);
 
     if (plain.error) {
-      console.error("getLandingPlans activities:", plain.error.message);
       return [];
     }
     rows = (plain.data ?? []) as Record<string, unknown>[];
@@ -201,7 +199,6 @@ async function fetchLandingPlansUncached(
       .eq("status", "accepted");
 
     if (acceptedError) {
-      console.error("getLandingPlans accepted counts:", acceptedError.message);
     } else {
       for (const row of accepted ?? []) {
         const aid = row.activity_id as string;
@@ -357,8 +354,7 @@ export async function getLandingPlans(
 ): Promise<LandingPlansPayload> {
   try {
     return await fetchLandingPlansUncached(input);
-  } catch (e) {
-    console.error("getLandingPlans:", e);
+  } catch {
     return {
       plans: [],
       heroPlans: [],

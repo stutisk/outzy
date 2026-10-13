@@ -41,7 +41,7 @@ export function LandingCategoriesSection() {
   };
 
   return (
-    <section className={`move-section relative overflow-hidden ${LANDING_SECTION_PY}`}>
+    <section className={` relative overflow-hidden ${LANDING_SECTION_PY}`}>
       <div className={`${PAGE_CONTAINER} relative`}>
         <RevealOnScroll>
           <header className="max-w-xl overflow-visible">
@@ -52,7 +52,7 @@ export function LandingCategoriesSection() {
               What&apos;s the move?
             </h2>
             <p className="mt-3 text-base leading-relaxed text-stone-600">
-              Pick a lane to start a plan — we pre-fill the form, you edit the
+              Pick a lane to start a plan  we pre-fill the form, you edit the
               details.
             </p>
           </header>

@@ -168,7 +168,6 @@ export function ChatPanel({
       .single();
 
     if (sendError) {
-      console.error(sendError);
       setError("Could not send message.");
       setSending(false);
       return;

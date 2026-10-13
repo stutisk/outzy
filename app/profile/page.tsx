@@ -105,8 +105,8 @@ function ProfileContent() {
 
   return (
     <AppShell
-      title={viewingOwn ? "Your profile" : `@${displayName}`}
-      subtitle={profile.city || undefined}
+      // title={viewingOwn ? "Your profile" : `@${displayName}`}
+      // subtitle={profile.city || undefined}
       action={
         viewingOwn ? (
           <div className="flex flex-wrap gap-2">
@@ -131,12 +131,12 @@ function ProfileContent() {
             onClick={() => router.push("/feed")}
             className="rounded-full px-4 py-2 text-sm font-semibold text-stone-600 hover:text-coral"
           >
-            Feed
+         Back to Feed 
           </button>
         )
       }
     >
-      <div className="space-y-8">
+      <div className="space-y-8 ">
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
           <div
             className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-coral to-coral-hover text-2xl font-bold text-white"

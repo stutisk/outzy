@@ -78,8 +78,7 @@ export async function GET(request: Request) {
       displayName: data.display_name,
       ...formatted,
     });
-  } catch (err) {
-    console.error("Reverse geocode error:", err);
+  } catch {
     return NextResponse.json(
       { error: "Reverse geocoding failed", ok: false },
       { status: 500 }

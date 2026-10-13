@@ -3,8 +3,17 @@
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type SubmitEventHandler } from "react";
+import { AppModal } from "@/components/app-modal";
+import {
+  ActivityDetails,
+  ActivityDetailsFooter,
+} from "@/components/activity-details";
+import type { JoinRequestStatus } from "@/components/feed-activity-card";
 import { AppShell } from "@/components/app-shell";
+import { ChatModal } from "@/components/chat-modal";
 import { Spinner } from "@/components/spinner";
+import { isActivityUpcoming } from "@/lib/activity-expiry";
+import { openChatForAcceptedJoin } from "@/lib/chat";
 import type { MapLocationConfirmPayload } from "@/components/map-location-picker";
 import { geocodeLocation } from "@/lib/geocode-client";
 import { getCategoryLabel } from "@/lib/categories";
@@ -38,6 +47,7 @@ type ActivityRow = {
   user_id: string;
   latitude: number | null;
   longitude: number | null;
+  created_at?: string;
 };
 
 type MapPinnedLocation = {
@@ -77,6 +87,22 @@ function ActivityDetailContent() {
   const [mapPinned, setMapPinned] = useState<MapPinnedLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [host, setHost] = useState<{
+    id: string;
+    username: string;
+    avatar_url?: string | null;
+  } | null>(null);
+  const [joinStatus, setJoinStatus] = useState<JoinRequestStatus>("none");
+  const [requestId, setRequestId] = useState<string | undefined>();
+  const [spotsLeft, setSpotsLeft] = useState(0);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [sendingRequest, setSendingRequest] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [pageError, setPageError] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -102,7 +128,50 @@ function ActivityDetailContent() {
 
       const row = data as ActivityRow;
       setActivity(row);
-      setIsHost(row.user_id === user.id);
+      const hostIsViewer = row.user_id === user.id;
+      setIsHost(hostIsViewer);
+
+      const { data: hostProfile } = await supabase
+        .from("users")
+        .select("id, username, avatar_url")
+        .eq("id", row.user_id)
+        .maybeSingle();
+      if (hostProfile) {
+        setHost(hostProfile);
+      }
+
+      const { count: acceptedCount } = await supabase
+        .from("activity_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("activity_id", row.id)
+        .eq("status", "accepted");
+      setSpotsLeft(
+        Math.max(0, row.max_people - (acceptedCount ?? 0)),
+      );
+
+      if (!hostIsViewer) {
+        const { data: mine } = await supabase
+          .from("activity_requests")
+          .select("id, status")
+          .eq("activity_id", row.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (mine?.status) {
+          const st = mine.status as JoinRequestStatus;
+          if (
+            st === "pending" ||
+            st === "accepted" ||
+            st === "rejected" ||
+            st === "cancelled"
+          ) {
+            setJoinStatus(st);
+            setRequestId(mine.id);
+          }
+        }
+      } else {
+        setJoinStatus("none");
+      }
+
       const { date, time } = splitActivityDate(row.activity_date);
       setFormData({
         title: row.title,
@@ -190,7 +259,6 @@ function ActivityDetailContent() {
         .eq("id", activity.id);
 
       if (updateError) {
-        console.error(updateError);
         setError("Could not save changes. Check Supabase RLS for activities.");
         return;
       }
@@ -203,12 +271,59 @@ function ActivityDetailContent() {
         .eq("id", activity.id)
         .single();
       if (refreshed) setActivity(refreshed as ActivityRow);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("Something went wrong.");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSendRequest = async () => {
+    if (!activity) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      router.push("/");
+      return;
+    }
+    if (!requestMessage.trim()) {
+      setPageError("Please add a message for the host.");
+      return;
+    }
+    setSendingRequest(true);
+    setPageError("");
+    const { error: insertError } = await supabase.from("activity_requests").insert({
+      activity_id: activity.id,
+      user_id: user.id,
+      message: requestMessage.trim(),
+      status: "pending",
+    });
+    setSendingRequest(false);
+    if (insertError) {
+      setPageError("Could not send request. Try again.");
+      return;
+    }
+    setJoinStatus("pending");
+    setShowRequestModal(false);
+    setRequestMessage("");
+  };
+
+  const confirmDelete = async () => {
+    if (!activity) return;
+    setDeleting(true);
+    const { error: deleteError } = await supabase
+      .from("activities")
+      .delete()
+      .eq("id", activity.id)
+      .eq("user_id", activity.user_id);
+    setDeleting(false);
+    if (deleteError) {
+      setPageError("Could not delete this plan.");
+      setShowDeleteModal(false);
+      return;
+    }
+    router.push("/feed");
   };
 
   if (loading) {
@@ -236,23 +351,31 @@ function ActivityDetailContent() {
     );
   }
 
-  const mapsUrl =
-    activity.latitude != null && activity.longitude != null
-      ? `https://www.google.com/maps/search/?api=1&query=${activity.latitude},${activity.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.city)}`;
-
-  const when = new Date(activity.activity_date).toLocaleString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+  const upcoming = isActivityUpcoming({
+    activity_date: activity.activity_date,
   });
+
+  const cardActivity = {
+    id: activity.id,
+    user_id: activity.user_id,
+    title: activity.title,
+    description: activity.description,
+    city: activity.city,
+    activity_date: activity.activity_date,
+    max_people: activity.max_people,
+    category: activity.category,
+    created_at: activity.created_at ?? new Date().toISOString(),
+    host: host
+      ? {
+          id: host.id,
+          username: host.username,
+          avatar_url: host.avatar_url,
+        }
+      : undefined,
+  };
 
   return (
     <AppShell
-      title={editing ? "Edit plan" : activity.title}
-      subtitle={editing ? undefined : getCategoryLabel(activity.category)}
       action={
         isHost && !editing ? (
           <button
@@ -265,7 +388,7 @@ function ActivityDetailContent() {
         ) : undefined
       }
     >
-      <div className="mx-auto max-w-xl">
+      <div className="mx-auto w-full max-w-xl">
         {editing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <ActivityFormFields
@@ -371,32 +494,162 @@ function ActivityDetailContent() {
             </div>
           </form>
         ) : (
-          <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold text-stone-500">{when}</p>
-            <p className="text-base leading-relaxed text-stone-700">
-              {activity.description}
-            </p>
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-sm font-bold text-coral hover:underline"
-            >
-              {activity.city} — open in maps
-            </a>
-            <p className="text-sm text-stone-600">
-              Up to {activity.max_people} people
-            </p>
+          <>
+            {pageError ? (
+              <p
+                className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700"
+                role="alert"
+              >
+                {pageError}
+              </p>
+            ) : null}
+            <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
+              <ActivityDetails
+                activity={cardActivity}
+                upcoming={upcoming}
+                spotsLeft={spotsLeft}
+                joinStatus={isHost ? "none" : joinStatus}
+                isHost={isHost}
+                onJoin={() => setShowRequestModal(true)}
+                onEdit={() => setEditing(true)}
+                onDelete={() => setShowDeleteModal(true)}
+                onHostClick={() =>
+                  router.push(`/profile?userId=${activity.user_id}`)
+                }
+                onOpenChat={async () => {
+                  const {
+                    data: { user },
+                  } = await supabase.auth.getUser();
+                  if (!user) return;
+                  const { conversationId, error: chatError } =
+                    await openChatForAcceptedJoin(
+                      activity.id,
+                      user.id,
+                      requestId,
+                    );
+                  if (conversationId) {
+                    setChatId(conversationId);
+                    setChatOpen(true);
+                  } else if (chatError) {
+                    setPageError(chatError.message);
+                  }
+                }}
+              />
+              <div className="border-t border-stone-100 px-3 pb-4 pt-3 sm:px-6 sm:pb-5">
+                <ActivityDetailsFooter
+                  upcoming={upcoming}
+                  isHost={isHost}
+                  joinStatus={isHost ? "none" : joinStatus}
+                  onJoin={() => setShowRequestModal(true)}
+                  onEdit={() => setEditing(true)}
+                  onDelete={() => setShowDeleteModal(true)}
+                  onOpenChat={async () => {
+                    const {
+                      data: { user },
+                    } = await supabase.auth.getUser();
+                    if (!user) return;
+                    const { conversationId, error: chatError } =
+                      await openChatForAcceptedJoin(
+                        activity.id,
+                        user.id,
+                        requestId,
+                      );
+                    if (conversationId) {
+                      setChatId(conversationId);
+                      setChatOpen(true);
+                    } else if (chatError) {
+                      setPageError(chatError.message);
+                    }
+                  }}
+                />
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => router.push("/feed")}
-              className="w-full rounded-full border border-stone-200 py-3 text-sm font-semibold text-stone-800"
+              className="mt-4 w-full rounded-full border border-stone-200 py-3 text-sm font-semibold text-stone-800"
             >
-              Back to feed
+              ← Back to feed
             </button>
-          </div>
+          </>
         )}
       </div>
+
+      <AppModal
+        open={showRequestModal}
+        onClose={() => setShowRequestModal(false)}
+        title="Message the host"
+        subtitle={
+          host
+            ? `@${host.username} will see your note and can accept or decline.`
+            : undefined
+        }
+        footer={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRequestModal(false)}
+              className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-sm font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSendRequest()}
+              disabled={sendingRequest || !requestMessage.trim()}
+              className="flex-1 rounded-full bg-coral py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {sendingRequest ? "Sending…" : "Send request"}
+            </button>
+          </div>
+        }
+      >
+        <textarea
+          value={requestMessage}
+          onChange={(e) => setRequestMessage(e.target.value)}
+          rows={4}
+          className="w-full rounded-2xl border border-stone-200 p-3 text-sm"
+          placeholder="Why do you want to join?"
+        />
+      </AppModal>
+
+      <AppModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete this activity?"
+        footer={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(false)}
+              className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-sm font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmDelete()}
+              disabled={deleting}
+              className="flex-1 rounded-full bg-red-600 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-stone-600">
+          This cannot be undone. Chats tied to this plan will be removed.
+        </p>
+      </AppModal>
+
+      <ChatModal
+        open={chatOpen}
+        conversationId={chatId}
+        onClose={() => {
+          setChatOpen(false);
+          setChatId(null);
+        }}
+      />
     </AppShell>
   );
 }

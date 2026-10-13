@@ -320,7 +320,7 @@ export function FeedActivityCard({
         </div>
       </div>
 
-      <div className="mt-auto border-t border-stone-100 px-4 pb-4 pt-3 sm:px-5">
+      <div className="mt-auto  px-4 pb-4 pt-3 sm:px-5">
         {readOnly ? (
           <p className={`${STATUS} bg-stone-50 text-stone-500`}>
             {!upcoming ? "Ended" : mode === "mine" ? "Your plan" : "Upcoming"}

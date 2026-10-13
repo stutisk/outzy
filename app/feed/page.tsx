@@ -336,7 +336,7 @@ function FeedPageContent() {
         authUser.id,
       );
       if (profileError) {
-        console.error("Could not load profile:", profileError.message);
+        showToast("Could not load your profile.");
       } else if (!isProfileComplete(profile)) {
         router.push("/onboarding?next=/feed");
         return;
@@ -359,7 +359,6 @@ function FeedPageContent() {
           .select("*")
           .order("activity_date", { ascending: true });
         if (plain.error) {
-          console.error("Error fetching activities:", plain.error);
           setActivities([]);
           setLoading(false);
           return;
@@ -718,7 +717,6 @@ function FeedPageContent() {
       });
 
       if (error) {
-        console.error("Error requesting to join:", error);
         alert(
           error.message.includes("activity_requests")
             ? "Could not send — make sure join requests are set up in Supabase (run the latest migration)."
@@ -735,8 +733,7 @@ function FeedPageContent() {
         setShowModal(false);
         setRequestMessage("");
       }
-    } catch (err) {
-      console.error("Error:", err);
+    } catch {
       alert("Something went wrong. Please try again.");
     } finally {
       setSendingRequest(false);
@@ -834,7 +831,6 @@ function FeedPageContent() {
         .eq("id", requestId);
 
       if (error) {
-        console.error("Error updating request:", error);
         alert("Failed to update request. Please try again.");
       } else {
         resolveRequestLocally(requestId);
@@ -865,7 +861,6 @@ function FeedPageContent() {
           }
 
           if (chatError) {
-            console.error(chatError);
             alert(
               "Request accepted, but chat could not start. Run supabase/migrations/20260328170000_conversations_messages.sql and 20260328180000_chat_grants_and_backfill_rpc.sql in Supabase, then try Open chat on the card.",
             );
@@ -880,8 +875,7 @@ function FeedPageContent() {
 
         await fetchRequests();
       }
-    } catch (err) {
-      console.error("Error:", err);
+    } catch {
       alert("Something went wrong. Please try again.");
     } finally {
       setProcessingRequest(null);
@@ -904,9 +898,9 @@ function FeedPageContent() {
   return (
     <AppShell>
       <div className="space-y-3 pb-4">
-        <header className="flex items-center justify-between gap-3 pt-1">
+        <header className="flex items-center justify-between gap-3 pt-2">
           <h1 className="text-xl font-extrabold tracking-tight text-navy sm:text-2xl">
-            Discover
+            Discover Around You :) 
           </h1>
           <button
             type="button"
@@ -949,8 +943,6 @@ function FeedPageContent() {
         </div>
 
         <FeedFilterBar
-          search={searchQuery}
-          onSearchChange={setSearchQuery}
           categoryChip={categoryChip}
           onCategoryChip={setCategoryChip}
           chips={CATEGORY_CHIPS.map((c) => ({ id: c.id, label: c.label }))}
@@ -1086,7 +1078,6 @@ function FeedPageContent() {
                               }));
                               openChatModal(conversationId);
                             } else {
-                              console.error(chatErr);
                               alert(
                                 chatErr?.message ??
                                   "Chat is not available yet. Make sure the host accepted your request and chat migrations are applied in Supabase.",
@@ -1100,7 +1091,7 @@ function FeedPageContent() {
               })}
             </div>
 
-            <div className="flex flex-col items-center gap-3 border-t border-stone-200/80 pt-6">
+            <div className="flex flex-col items-center gap-3  pt-6">
               <p className="text-sm text-stone-500">
                 Showing{" "}
                 <span className="font-semibold text-stone-800">
