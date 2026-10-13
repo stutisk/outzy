@@ -20,6 +20,7 @@ import {
 } from "@/lib/chat";
 import { isTitleVisible } from "@/lib/activity-validation";
 import { isActivityUpcoming } from "@/lib/activity-expiry";
+import { deleteHostActivity } from "@/lib/delete-activity";
 import { runExpirePastActivities } from "@/lib/expire-activities";
 import type { CategoryChipId, WhenFilter } from "@/lib/feed-filters";
 import { fetchUserProfile, isProfileComplete } from "@/lib/profile";
@@ -650,23 +651,28 @@ function FeedPageContent() {
     if (!deleteTarget || !user) return;
     setDeleting(true);
     const id = deleteTarget.id;
-    setActivities((prev) => prev.filter((a) => a.id !== id));
-    setDetailActivity(null);
-    setDeleteTarget(null);
 
-    const { error } = await supabase
-      .from("activities")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
+    const { ok, errorMessage } = await deleteHostActivity(id);
 
     setDeleting(false);
-    if (error) {
-      showToast("Could not delete — try again.");
-      void refreshJoinAndPendingMeta();
-    } else {
-      showToast("Activity deleted.");
+
+    if (!ok) {
+      showToast(
+        errorMessage?.includes("migration")
+          ? "Delete blocked by database setup — apply the latest Supabase migration."
+          : "Could not delete — try again.",
+      );
+      return;
     }
+
+    setActivities((prev) => prev.filter((a) => a.id !== id));
+    setDetailActivity((current) => (current?.id === id ? null : current));
+    setSelectedActivity((current) =>
+      current?.id === id ? null : current,
+    );
+    setDeleteTarget(null);
+    showToast("Activity deleted.");
+    void refreshJoinAndPendingMeta();
   };
 
   const openRequestModal = (activity: Activity) => {
@@ -1257,7 +1263,7 @@ function FeedPageContent() {
         <textarea
           value={requestMessage}
           onChange={(e) => setRequestMessage(e.target.value)}
-          placeholder="Hey! I'd love to join — …"
+          placeholder="Hey! I'd love to join :) :) "
           rows={4}
           className="w-full rounded-2xl border border-stone-200 p-3 text-sm focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral-100"
         />

@@ -1,15 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ArrowUpRight,
-  Clock,
-  MapPin,
-  MoreVertical,
-  Navigation,
-  Users,
-} from "lucide-react";
-import { getCategoryImageAlt, getCategoryImageUrl } from "@/lib/category-images";
+import { ActivityCardCover } from "@/components/activity-card-cover";
+import { Clock, MapPin, MoreVertical, Navigation, Users } from "lucide-react";
 import { getCategoryLabel } from "@/lib/categories";
 import { getCategoryVisual } from "@/lib/category-visual";
 import { neighborhoodLandmark } from "@/lib/activity-text";
@@ -62,10 +55,6 @@ function isNewActivity(createdAt: string) {
   return Date.now() - created < 3 * 24 * 60 * 60 * 1000;
 }
 
-function mapsUrl(city: string) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city)}`;
-}
-
 export type JoinRequestStatus =
   | "none"
   | "pending"
@@ -112,7 +101,6 @@ export function FeedActivityCard({
 }) {
   const { month, day, weekday, time } = formatCardDate(activity.activity_date);
   const { gradientAccent } = getCategoryVisual(activity.category);
-  const coverUrl = getCategoryImageUrl(activity.category, 900);
   const hostUsername = activity.host?.username;
   const hostInitial = hostUsername?.charAt(0).toUpperCase() ?? "?";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -187,12 +175,10 @@ export function FeedActivityCard({
         className="cursor-pointer text-left"
       >
         <div className="relative h-44 overflow-hidden sm:h-48">
-          <img
-            src={coverUrl}
-            alt={getCategoryImageAlt(activity.category)}
-            className={`size-full object-cover ${upcoming ? "" : "grayscale"}`}
-            loading="lazy"
-            decoding="async"
+          <ActivityCardCover
+            activityId={activity.id}
+            category={activity.category}
+            upcoming={upcoming}
           />
           <div
             aria-hidden

@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { List, Map, Search, SlidersHorizontal } from "lucide-react";
-import type { WhenFilter } from "@/lib/feed-filters";
-import type { CategoryChipId } from "@/lib/feed-filters";
+import {
+  WHEN_FILTER_LABEL,
+  type CategoryChipId,
+  type WhenFilter,
+} from "@/lib/feed-filters";
 
 type FeedFilterBarProps = {
  
@@ -97,15 +100,29 @@ export function FeedFilterBar({
           </button>
         </div>
 
-        <div className="relative hidden sm:block" ref={moreRef}>
+        <div className="relative shrink-0" ref={moreRef}>
           <button
             type="button"
             onClick={() => setMoreOpen((o) => !o)}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 text-xs font-semibold text-stone-700"
+            className={`inline-flex h-10 max-w-[9.5rem] items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold sm:max-w-none sm:px-3 ${
+              whenFilter === "upcoming"
+                ? "border-stone-200 bg-white text-stone-700"
+                : "border-coral/40 bg-coral-50 text-coral"
+            }`}
             aria-expanded={moreOpen}
+            aria-label={`More filters, showing ${WHEN_FILTER_LABEL[whenFilter]} plans`}
           >
-            <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
-            More filters
+            <SlidersHorizontal className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="hidden truncate sm:inline">More filters</span>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold leading-none sm:text-[11px] ${
+                whenFilter === "upcoming"
+                  ? "bg-stone-100 text-stone-700"
+                  : "bg-coral text-white"
+              }`}
+            >
+              {WHEN_FILTER_LABEL[whenFilter]}
+            </span>
           </button>
           {moreOpen ? (
             <div

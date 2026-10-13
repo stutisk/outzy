@@ -14,6 +14,7 @@ import { ChatModal } from "@/components/chat-modal";
 import { Spinner } from "@/components/spinner";
 import { isActivityUpcoming } from "@/lib/activity-expiry";
 import { openChatForAcceptedJoin } from "@/lib/chat";
+import { deleteHostActivity } from "@/lib/delete-activity";
 import type { MapLocationConfirmPayload } from "@/components/map-location-picker";
 import { geocodeLocation } from "@/lib/geocode-client";
 import { getCategoryLabel } from "@/lib/categories";
@@ -312,14 +313,12 @@ function ActivityDetailContent() {
   const confirmDelete = async () => {
     if (!activity) return;
     setDeleting(true);
-    const { error: deleteError } = await supabase
-      .from("activities")
-      .delete()
-      .eq("id", activity.id)
-      .eq("user_id", activity.user_id);
+    const { ok } = await deleteHostActivity(activity.id);
     setDeleting(false);
-    if (deleteError) {
-      setPageError("Could not delete this plan.");
+    if (!ok) {
+      setPageError(
+        "Could not delete this plan. Apply migration 20260328250000_activity_host_delete_cascade.sql in Supabase if this keeps happening.",
+      );
       setShowDeleteModal(false);
       return;
     }
