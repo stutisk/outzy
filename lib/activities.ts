@@ -5,6 +5,7 @@ export type ActivityRow = {
   description: string;
   city: string;
   activity_date: string;
+  end_time?: string | null;
   max_people: number;
   category: string;
   user_id: string;

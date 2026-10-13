@@ -7,6 +7,16 @@ import { AppShell } from "@/components/app-shell";
 import { Spinner } from "@/components/spinner";
 import type { MapLocationConfirmPayload } from "@/components/map-location-picker";
 import type { ActivityInsert } from "@/lib/activities";
+import {
+  ActivityFormFields,
+  isActivityFormValid,
+} from "@/components/activity-form-fields";
+import {
+  activityDescriptionForSave,
+  activityTitleForSave,
+  validateActivityDescription,
+  validateActivityTitle,
+} from "@/lib/activity-validation";
 import { safeNextPath, signInWithGoogleNext } from "@/lib/auth-nav";
 import { fetchUserProfile, isProfileComplete } from "@/lib/profile";
 import { CATEGORIES } from "@/lib/categories";
@@ -172,6 +182,17 @@ function CreateActivityPageContent() {
       return;
     }
 
+    const titleError = validateActivityTitle(formData.title);
+    const descError = validateActivityDescription(formData.description);
+    if (titleError || descError) {
+      setError(titleError ?? descError ?? "Fix the form errors.");
+      return;
+    }
+    if (!isActivityFormValid(formData.title, formData.description)) {
+      setError("Please complete title and description.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -199,8 +220,8 @@ function CreateActivityPageContent() {
       }
 
       const payload: ActivityInsert = {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
+        title: activityTitleForSave(formData.title),
+        description: activityDescriptionForSave(formData.description),
         city: locationText,
         activity_date: `${formData.date}T${formData.time}:00`,
         max_people: parseInt(formData.maxPeople, 10),
@@ -259,44 +280,16 @@ function CreateActivityPageContent() {
     >
       <div className="mx-auto max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Title */}
-          <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-semibold text-slate-900 mb-2"
-            >
-              Activity Title *
-            </label>
-            <input
-              id="title"
-              name="title"
-              type="text"
-              value={formData.title}
-              onChange={handleChange}
-              // placeholder="e.g., "
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all placeholder:text-slate-400 text-black"
-              autoFocus
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-semibold text-slate-900 mb-2"
-            >
-              Description *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Yoo brooo? What's the plan?"
-              rows={3}
-              className="w-full border-2 border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-coral focus:ring-4 focus:ring-coral-100/50 transition-all resize-none"
-            />
-          </div>
+          <ActivityFormFields
+            title={formData.title}
+            description={formData.description}
+            onTitleChange={(v) =>
+              setFormData((prev) => ({ ...prev, title: v }))
+            }
+            onDescriptionChange={(v) =>
+              setFormData((prev) => ({ ...prev, description: v }))
+            }
+          />
 
           {/* Location */}
           <div>

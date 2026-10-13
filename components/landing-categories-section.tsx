@@ -1,14 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+import { LandingIconBox } from "@/components/landing-icon-box";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import {
   navigateToCreateWithCategory,
   signInWithGoogleNext,
 } from "@/lib/auth-nav";
-import { LANDING_CATEGORIES } from "@/lib/landing-categories";
-import { PAGE_CONTAINER } from "@/lib/layout";
+import { getLandingCategoryIcon } from "@/lib/landing-category-icons";
+import { LANDING_CATEGORIES_FEATURED } from "@/lib/landing-categories";
+import { LANDING_SECTION_PY, PAGE_CONTAINER } from "@/lib/layout";
 import { supabase } from "@/lib/supabase";
+
+const ICON_TINT: Record<string, string> = {
+  hiking: "bg-emerald-50 text-emerald-700",
+  coffee: "bg-amber-50 text-amber-800",
+  gaming: "bg-indigo-50 text-indigo-700",
+  food: "bg-orange-50 text-orange-800",
+  running: "bg-rose-50 text-rose-700",
+  photography: "bg-violet-50 text-violet-700",
+};
 
 export function LandingCategoriesSection() {
   const router = useRouter();
@@ -29,97 +41,77 @@ export function LandingCategoriesSection() {
   };
 
   return (
-    <section className="move-section relative overflow-hidden py-20 md:py-28">
+    <section className={`move-section relative overflow-hidden ${LANDING_SECTION_PY}`}>
       <div className={`${PAGE_CONTAINER} relative`}>
         <RevealOnScroll>
-          <header className="mx-auto max-w-3xl text-center">
-            <span
-              className="inline-block rounded-full bg-teal-50 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-teal-800"
-            >
-              Pick your vibe
-            </span>
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-navy md:text-5xl md:leading-[1.08]">
-              What&apos;s the{" "}
-              <span className="relative inline-block text-coral">
-                move?
-                <span
-                  className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-highlight/90"
-                  aria-hidden
-                />
-              </span>
+          <header className="max-w-xl overflow-visible">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-600">
+              Host something
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-navy md:text-3xl">
+              What&apos;s the move?
             </h2>
-            <p className="mt-5 text-lg leading-relaxed text-stone-600">
-              Tap a category to start hosting — we&apos;ll pre-fill it on the
-              create page (you can change it anytime).
+            <p className="mt-3 text-base leading-relaxed text-stone-600">
+              Pick a lane to start a plan — we pre-fill the form, you edit the
+              details.
             </p>
           </header>
         </RevealOnScroll>
 
         <ul
-          className="mt-14 grid list-none gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
-          aria-label="Activity categories"
+          className="mt-8 grid list-none grid-cols-2 gap-3 md:grid-cols-3 md:gap-4"
+          aria-label="Popular categories"
         >
-          {LANDING_CATEGORIES.map((cat, i) => (
-            <li key={cat.slug} className="min-h-[4.5rem]">
-              <RevealOnScroll delayMs={Math.min(i * 45, 360)} className="h-full">
-                <button
-                  type="button"
-                  onClick={() => goCreate(cat.slug)}
-                  className={`group move-lane relative flex h-full w-full items-center gap-4 overflow-hidden rounded-2xl bg-linear-to-br px-5 py-4 text-left ring-1 ring-inset transition-[transform,box-shadow,ring-color] duration-300 hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.99] sm:rounded-[1.35rem] sm:py-[1.15rem] ${cat.lane}`}
-                >
-                  <span
-                    className="pointer-events-none absolute -right-8 -top-8 size-24 rounded-full bg-white/30 blur-2xl opacity-60 transition-opacity duration-300 group-hover:opacity-100"
-                    aria-hidden
-                  />
+          {LANDING_CATEGORIES_FEATURED.map((cat, i) => {
+            const Icon = getLandingCategoryIcon(cat.slug);
+            const tint = ICON_TINT[cat.slug] ?? "bg-stone-100 text-stone-700";
 
-                  <span
-                    className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-white/70 text-2xl shadow-sm backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 sm:size-12"
-                    aria-hidden
+            return (
+              <li key={cat.slug}>
+                <RevealOnScroll delayMs={Math.min(i * 50, 250)} className="h-full">
+                  <button
+                    type="button"
+                    onClick={() => goCreate(cat.slug)}
+                    className="group flex h-full min-h-[4.75rem] w-full items-center gap-3 rounded-xl border border-black/10 bg-white px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-black/15 hover:bg-stone-50/80 hover:shadow-[0_8px_24px_rgb(0_0_0/0.05)] md:rounded-2xl"
                   >
-                    {cat.emoji}
-                  </span>
-
-                  <span className="relative min-w-0 flex-1">
-                    <span className="block truncate text-base font-bold tracking-tight text-stone-900 sm:text-[1.05rem]">
-                      {cat.name}
+                    <LandingIconBox icon={Icon} className={tint} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold text-stone-900">
+                        {cat.name}
+                      </span>
+                      <span
+                        className="mt-0.5 flex items-center gap-1 text-xs font-medium text-stone-500 group-hover:text-teal-800"
+                      >
+                        Host
+                        <ArrowRight
+                          className="size-3.5 transition-transform group-hover:translate-x-0.5"
+                          strokeWidth={1.5}
+                        />
+                      </span>
                     </span>
-                    <span
-                      className="mt-0.5 block text-xs font-medium text-stone-600/80 transition-colors group-hover:text-coral"
-                    >
-                      Host this →
-                    </span>
-                  </span>
-
-                  <span
-                    className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-sm font-semibold text-stone-600 shadow-sm transition-all duration-300 group-hover:translate-x-0.5 group-hover:bg-navy group-hover:text-white"
-                    aria-hidden
-                  >
-                    +
-                  </span>
-                </button>
-              </RevealOnScroll>
-            </li>
-          ))}
+                  </button>
+                </RevealOnScroll>
+              </li>
+            );
+          })}
         </ul>
 
-        <RevealOnScroll delayMs={200}>
-          <div
-            className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6"
-          >
+        <RevealOnScroll delayMs={180}>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
             <button
               type="button"
               onClick={() => router.push("/feed")}
-              className="pill-interactive inline-flex items-center gap-2 rounded-full bg-coral px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-teal-900/15 hover:bg-coral-hover"
+              className="pill-interactive inline-flex items-center gap-2 rounded-full bg-coral px-6 py-3 text-sm font-semibold text-white hover:bg-coral-hover"
             >
               Browse the feed
-              <span aria-hidden>→</span>
+              <ArrowRight className="size-4" strokeWidth={1.5} />
             </button>
             <button
               type="button"
               onClick={() => void goCreateGeneric()}
-              className="text-sm font-semibold text-stone-600 underline-offset-4 transition-colors hover:text-coral hover:underline"
+              className="text-sm font-medium text-stone-600 hover:text-teal-800 hover:underline"
             >
-              Or pick category later
+              All categories on create →
             </button>
           </div>
         </RevealOnScroll>

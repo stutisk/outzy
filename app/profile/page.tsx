@@ -208,6 +208,9 @@ function ProfileContent() {
                     onRequests={() => router.push("/feed")}
                     onEdit={() => router.push(`/activity/${activity.id}`)}
                     onOpenChat={undefined}
+                    onOpenDetails={() =>
+                      router.push(`/activity/${activity.id}`)
+                    }
                   />
                 );
               })}

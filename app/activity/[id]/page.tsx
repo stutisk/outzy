@@ -9,6 +9,16 @@ import type { MapLocationConfirmPayload } from "@/components/map-location-picker
 import { geocodeLocation } from "@/lib/geocode-client";
 import { getCategoryLabel } from "@/lib/categories";
 import { CATEGORIES } from "@/lib/categories";
+import {
+  ActivityFormFields,
+  isActivityFormValid,
+} from "@/components/activity-form-fields";
+import {
+  activityDescriptionForSave,
+  activityTitleForSave,
+  validateActivityDescription,
+  validateActivityTitle,
+} from "@/lib/activity-validation";
 import { supabase } from "@/lib/supabase";
 
 const MapLocationPicker = dynamic(
@@ -137,6 +147,17 @@ function ActivityDetailContent() {
       return;
     }
 
+    const titleError = validateActivityTitle(formData.title);
+    const descError = validateActivityDescription(formData.description);
+    if (titleError || descError) {
+      setError(titleError ?? descError ?? "Fix the form errors.");
+      return;
+    }
+    if (!isActivityFormValid(formData.title, formData.description)) {
+      setError("Please complete title and description.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -157,8 +178,8 @@ function ActivityDetailContent() {
       const { error: updateError } = await supabase
         .from("activities")
         .update({
-          title: formData.title.trim(),
-          description: formData.description.trim(),
+          title: activityTitleForSave(formData.title),
+          description: activityDescriptionForSave(formData.description),
           city: locationText,
           activity_date: `${formData.date}T${formData.time}:00`,
           max_people: parseInt(formData.maxPeople, 10),
@@ -247,33 +268,16 @@ function ActivityDetailContent() {
       <div className="mx-auto max-w-xl">
         {editing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-stone-800">
-                Title
-              </label>
-              <input
-                name="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, title: e.target.value }))
-                }
-                className="w-full rounded-2xl border border-stone-200 p-3 text-sm"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-stone-800">
-                Description
-              </label>
-              <textarea
-                name="description"
-                rows={3}
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, description: e.target.value }))
-                }
-                className="w-full rounded-2xl border border-stone-200 p-3 text-sm"
-              />
-            </div>
+            <ActivityFormFields
+              title={formData.title}
+              description={formData.description}
+              onTitleChange={(v) =>
+                setFormData((p) => ({ ...p, title: v }))
+              }
+              onDescriptionChange={(v) =>
+                setFormData((p) => ({ ...p, description: v }))
+              }
+            />
             <div>
               <label className="mb-1 block text-sm font-semibold text-stone-800">
                 Location

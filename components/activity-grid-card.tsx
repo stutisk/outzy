@@ -86,6 +86,7 @@ export function ActivityGridCard({
       onRequests={onRequests}
       onEdit={onEdit}
       onOpenChat={onOpenChat}
+      onOpenDetails={() => {}}
     />
   );
 }

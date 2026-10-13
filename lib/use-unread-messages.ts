@@ -32,7 +32,9 @@ export function useUnreadMessageCounts() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const t = window.setTimeout(() => {
+      void refresh();
+    }, 0);
 
     const onRead = () => {
       void refresh();
@@ -50,6 +52,7 @@ export function useUnreadMessageCounts() {
     });
 
     return () => {
+      window.clearTimeout(t);
       window.removeEventListener(MESSAGES_READ_EVENT, onRead);
       unsubscribeRealtime();
       subscription.unsubscribe();

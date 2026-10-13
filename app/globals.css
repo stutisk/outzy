@@ -61,6 +61,16 @@ select:disabled {
     auto;
 }
 
+.feed-filter-scroll {
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.feed-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* —— Motion —— */
 @keyframes fade-up {
   from {

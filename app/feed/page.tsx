@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ActivityDetailModal } from "@/components/activity-detail-modal";
 import { AppModal } from "@/components/app-modal";
 import { AppShell } from "@/components/app-shell";
 import { ChatModal } from "@/components/chat-modal";
+import { FeedFilterBar } from "@/components/feed-filter-bar";
 import {
   ActivityCard,
   type JoinRequestStatus,
@@ -16,6 +18,10 @@ import {
   ensureConversationOnAccept,
   openChatForAcceptedJoin,
 } from "@/lib/chat";
+import { isTitleVisible } from "@/lib/activity-validation";
+import { isActivityUpcoming } from "@/lib/activity-expiry";
+import { runExpirePastActivities } from "@/lib/expire-activities";
+import type { CategoryChipId, WhenFilter } from "@/lib/feed-filters";
 import { fetchUserProfile, isProfileComplete } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
 
@@ -38,6 +44,7 @@ interface Activity {
   description: string;
   city: string;
   activity_date: string;
+  end_time?: string | null;
   max_people: number;
   category: string;
   created_at: string;
@@ -76,7 +83,6 @@ type MyJoinState = {
 };
 
 type TabType = "others" | "mine";
-type WhenFilter = "upcoming" | "past" | "all";
 type ViewMode = "list" | "map";
 type GeoStatus = "loading" | "success" | "denied" | "unavailable";
 
@@ -86,16 +92,6 @@ type UserLocation = {
   latitude: number;
   longitude: number;
 };
-
-type CategoryChipId =
-  | "all"
-  | "food"
-  | "fitness"
-  | "gaming"
-  | "creative"
-  | "outdoors"
-  | "movies"
-  | "social";
 
 const CATEGORY_CHIPS: {
   id: CategoryChipId;
@@ -151,8 +147,8 @@ function formatDistance(km: number): string {
   return `${Math.round(km)} km away`;
 }
 
-function isUpcoming(dateStr: string) {
-  return new Date(dateStr) > new Date();
+function isUpcoming(activity: Activity) {
+  return isActivityUpcoming(activity);
 }
 
 function activityDistanceKm(
@@ -242,6 +238,12 @@ function FeedPageContent() {
   const [categorySlug, setCategorySlug] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [listPage, setListPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
+  const [deleteCounts, setDeleteCounts] = useState({ pending: 0, accepted: 0 });
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -253,7 +255,7 @@ function FeedPageContent() {
 
   useEffect(() => {
     setListPage(1);
-  }, [activeTab, whenFilter, categoryChip, categorySlug, categoryFromUrl]);
+  }, [activeTab, whenFilter, categoryChip, categorySlug, categoryFromUrl, searchQuery]);
 
   const [showModal, setShowModal] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
@@ -410,88 +412,109 @@ function FeedPageContent() {
       setLoading(false);
     };
 
+    void runExpirePastActivities();
     checkAuthAndFetch();
   }, [router]);
 
-  useEffect(() => {
-    const loadJoinRequestMeta = async () => {
-      if (!user || activities.length === 0) {
-        setMyJoinByActivity({});
-        setPendingCountByActivity({});
-        return;
+  const refreshJoinAndPendingMeta = useCallback(async () => {
+    if (!user || activities.length === 0) {
+      setMyJoinByActivity({});
+      setPendingCountByActivity({});
+      return;
+    }
+
+    const myActivityIds = activities
+      .filter((a) => a.user_id === user.id)
+      .map((a) => a.id);
+    const otherActivityIds = activities
+      .filter((a) => a.user_id !== user.id)
+      .map((a) => a.id);
+
+    if (otherActivityIds.length > 0) {
+      const { data: mine } = await supabase
+        .from("activity_requests")
+        .select("id, activity_id, status, message")
+        .eq("user_id", user.id)
+        .in("activity_id", otherActivityIds);
+
+      const joinMap: Record<string, MyJoinState> = {};
+      for (const row of mine ?? []) {
+        const status = row.status as JoinRequestStatus;
+        if (
+          status === "pending" ||
+          status === "accepted" ||
+          status === "rejected" ||
+          status === "cancelled"
+        ) {
+          joinMap[row.activity_id] = {
+            status,
+            message: row.message ?? "",
+            requestId: row.id,
+          };
+        }
       }
+      const acceptedIds = Object.entries(joinMap)
+        .filter(([, v]) => v.status === "accepted")
+        .map(([activityId]) => activityId);
 
-      const myActivityIds = activities
-        .filter((a) => a.user_id === user.id)
-        .map((a) => a.id);
-      const otherActivityIds = activities
-        .filter((a) => a.user_id !== user.id)
-        .map((a) => a.id);
+      if (acceptedIds.length > 0) {
+        const { data: convs } = await supabase
+          .from("conversations")
+          .select("id, activity_id")
+          .eq("guest_id", user.id)
+          .in("activity_id", acceptedIds);
 
-      if (otherActivityIds.length > 0) {
-        const { data: mine } = await supabase
-          .from("activity_requests")
-          .select("id, activity_id, status, message")
-          .eq("user_id", user.id)
-          .in("activity_id", otherActivityIds);
-
-        const joinMap: Record<string, MyJoinState> = {};
-        for (const row of mine ?? []) {
-          const status = row.status as JoinRequestStatus;
-          if (
-            status === "pending" ||
-            status === "accepted" ||
-            status === "rejected"
-          ) {
-            joinMap[row.activity_id] = {
-              status,
-              message: row.message ?? "",
-              requestId: row.id,
-            };
+        for (const c of convs ?? []) {
+          if (joinMap[c.activity_id]) {
+            joinMap[c.activity_id].conversationId = c.id;
           }
         }
-        const acceptedIds = Object.entries(joinMap)
-          .filter(([, v]) => v.status === "accepted")
-          .map(([activityId]) => activityId);
-
-        if (acceptedIds.length > 0) {
-          const { data: convs } = await supabase
-            .from("conversations")
-            .select("id, activity_id")
-            .eq("guest_id", user.id)
-            .in("activity_id", acceptedIds);
-
-          for (const c of convs ?? []) {
-            if (joinMap[c.activity_id]) {
-              joinMap[c.activity_id].conversationId = c.id;
-            }
-          }
-        }
-
-        setMyJoinByActivity(joinMap);
-      } else {
-        setMyJoinByActivity({});
       }
 
-      if (myActivityIds.length > 0) {
-        const { data: pending } = await supabase
-          .from("activity_requests")
-          .select("activity_id")
-          .in("activity_id", myActivityIds)
-          .eq("status", "pending");
+      setMyJoinByActivity(joinMap);
+    } else {
+      setMyJoinByActivity({});
+    }
 
-        const counts: Record<string, number> = {};
-        for (const row of pending ?? []) {
-          counts[row.activity_id] = (counts[row.activity_id] ?? 0) + 1;
-        }
-        setPendingCountByActivity(counts);
-      } else {
-        setPendingCountByActivity({});
+    if (myActivityIds.length > 0) {
+      const { data: pending } = await supabase
+        .from("activity_requests")
+        .select("activity_id")
+        .in("activity_id", myActivityIds)
+        .eq("status", "pending");
+
+      const counts: Record<string, number> = {};
+      for (const row of pending ?? []) {
+        counts[row.activity_id] = (counts[row.activity_id] ?? 0) + 1;
       }
-    };
-
-    loadJoinRequestMeta();
+      setPendingCountByActivity(counts);
+    } else {
+      setPendingCountByActivity({});
+    }
   }, [user, activities]);
+
+  useEffect(() => {
+    void refreshJoinAndPendingMeta();
+  }, [refreshJoinAndPendingMeta]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`activity_requests:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "activity_requests" },
+        () => {
+          void refreshJoinAndPendingMeta();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user, refreshJoinAndPendingMeta]);
 
   const isOwnActivity = (activityUserId: string) => user?.id === activityUserId;
 
@@ -505,10 +528,20 @@ function FeedPageContent() {
     const others = activities.filter((a) => !isOwnActivity(a.user_id));
     const pool = activeTab === "mine" ? mine : others;
 
+    const q = searchQuery.trim().toLowerCase();
+
     const filtered = pool.filter((a) => {
-      const upcoming = isUpcoming(a.activity_date);
+      if (!isTitleVisible(a.title)) return false;
+      const upcoming = isUpcoming(a);
       if (whenFilter === "upcoming" && !upcoming) return false;
       if (whenFilter === "past" && upcoming) return false;
+      if (
+        q &&
+        !a.title.toLowerCase().includes(q) &&
+        !a.description.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
       if (
         categoryChip !== "all" &&
         chipCategories.length > 0 &&
@@ -539,9 +572,7 @@ function FeedPageContent() {
       return ta - tb;
     });
 
-    const upcomingCount = pool.filter((a) =>
-      isUpcoming(a.activity_date),
-    ).length;
+    const upcomingCount = pool.filter((a) => isUpcoming(a)).length;
     const pastCount = pool.length - upcomingCount;
 
     return {
@@ -563,13 +594,14 @@ function FeedPageContent() {
     categorySlug,
     user?.id,
     userLocation,
+    searchQuery,
   ]);
 
   const mapActivities = useMemo(() => {
     return flatList
       .filter(
         (a) =>
-          isUpcoming(a.activity_date) &&
+          isUpcoming(a) &&
           a.latitude != null &&
           a.longitude != null &&
           !Number.isNaN(a.latitude) &&
@@ -593,7 +625,53 @@ function FeedPageContent() {
   const hasMoreActivities = visibleList.length < flatList.length;
   const remainingCount = flatList.length - visibleList.length;
 
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 4000);
+  };
+
+  const openDeleteConfirm = async (activity: Activity) => {
+    const [{ count: pending }, { count: accepted }] = await Promise.all([
+      supabase
+        .from("activity_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("activity_id", activity.id)
+        .eq("status", "pending"),
+      supabase
+        .from("activity_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("activity_id", activity.id)
+        .eq("status", "accepted"),
+    ]);
+    setDeleteCounts({ pending: pending ?? 0, accepted: accepted ?? 0 });
+    setDeleteTarget(activity);
+  };
+
+  const confirmDeleteActivity = async () => {
+    if (!deleteTarget || !user) return;
+    setDeleting(true);
+    const id = deleteTarget.id;
+    setActivities((prev) => prev.filter((a) => a.id !== id));
+    setDetailActivity(null);
+    setDeleteTarget(null);
+
+    const { error } = await supabase
+      .from("activities")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    setDeleting(false);
+    if (error) {
+      showToast("Could not delete — try again.");
+      void refreshJoinAndPendingMeta();
+    } else {
+      showToast("Activity deleted.");
+    }
+  };
+
   const openRequestModal = (activity: Activity) => {
+    if (!isUpcoming(activity)) return;
     const existing = myJoinByActivity[activity.id];
     if (existing?.status === "pending" || existing?.status === "accepted") {
       return;
@@ -681,7 +759,7 @@ function FeedPageContent() {
       .from("activity_requests")
       .select("*, activities(title)")
       .in("activity_id", myActivityIds)
-      .eq("status", "pending")
+      .in("status", ["pending", "cancelled"])
       .order("created_at", { ascending: false });
 
     if (requestsData && requestsData.length > 0) {
@@ -724,6 +802,20 @@ function FeedPageContent() {
     return requests.filter((r) => r.activity_id === requestsActivityFilter);
   }, [requests, requestsActivityFilter]);
 
+  const resolveRequestLocally = (requestId: string) => {
+    const row = requests.find((r) => r.id === requestId);
+    setRequests((prev) => prev.filter((r) => r.id !== requestId));
+    if (row) {
+      setPendingCountByActivity((prev) => {
+        const next = { ...prev };
+        const n = (next[row.activity_id] ?? 1) - 1;
+        if (n <= 0) delete next[row.activity_id];
+        else next[row.activity_id] = n;
+        return next;
+      });
+    }
+  };
+
   const handleRequest = async (
     requestId: string,
     action: "accepted" | "rejected",
@@ -745,6 +837,9 @@ function FeedPageContent() {
         console.error("Error updating request:", error);
         alert("Failed to update request. Please try again.");
       } else {
+        resolveRequestLocally(requestId);
+        void refreshJoinAndPendingMeta();
+
         if (action === "accepted" && requestRow && activityRow && user) {
           const hostId = user.id;
           let conversationId: string | null = null;
@@ -784,15 +879,6 @@ function FeedPageContent() {
         }
 
         await fetchRequests();
-        setPendingCountByActivity((prev) => {
-          const accepted = requests.find((r) => r.id === requestId);
-          if (!accepted) return prev;
-          const next = { ...prev };
-          const n = (next[accepted.activity_id] ?? 1) - 1;
-          if (n <= 0) delete next[accepted.activity_id];
-          else next[accepted.activity_id] = n;
-          return next;
-        });
       }
     } catch (err) {
       console.error("Error:", err);
@@ -817,82 +903,64 @@ function FeedPageContent() {
 
   return (
     <AppShell>
-      <div className="space-y-5 pb-4">
-        <header className="space-y-2 pt-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-[2rem] sm:leading-tight">
-                Plans happening near you
-              </h1>
-              <p className="mt-2 max-w-lg text-sm font-medium leading-relaxed text-stone-600 sm:text-base">
-                Browse activities, filter by vibe, and join something filmy IRL.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push("/create-activity")}
-              className="shrink-0 rounded-full bg-coral px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-coral/25 transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              + Plan something
-            </button>
-          </div>
+      <div className="space-y-3 pb-4">
+        <header className="flex items-center justify-between gap-3 pt-1">
+          <h1 className="text-xl font-extrabold tracking-tight text-navy sm:text-2xl">
+            Discover
+          </h1>
+          <button
+            type="button"
+            onClick={() => router.push("/create-activity")}
+            className="shrink-0 rounded-full bg-coral px-4 py-2 text-sm font-bold text-white"
+          >
+            + Plan
+          </button>
         </header>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab("others")}
-              className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                activeTab === "others"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-500 hover:text-stone-800"
-              }`}
-            >
-              Nearby {counts.others > 0 && `(${counts.others})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("mine")}
-              className={`relative rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                activeTab === "mine"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-500 hover:text-stone-800"
-              }`}
-            >
-              Yours {counts.mine > 0 && `(${counts.mine})`}
-              {totalPendingRequests > 0 && activeTab !== "mine" && (
-                <span
-                  className="absolute -right-1 -top-1 size-2.5 rounded-full bg-coral ring-2 ring-white"
-                  aria-hidden
-                />
-              )}
-            </button>
-          </div>
-
-          <div className="flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-                viewMode === "list"
-                  ? "bg-coral-50 text-coral"
-                  : "text-stone-500"
-              }`}
-            >
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("map")}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-                viewMode === "map" ? "bg-coral-50 text-coral" : "text-stone-500"
-              }`}
-            >
-              Map
-            </button>
-          </div>
+        <div className="inline-flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("others")}
+            className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
+              activeTab === "others"
+                ? "bg-stone-900 text-white shadow-sm"
+                : "text-stone-500 hover:text-stone-800"
+            }`}
+          >
+            Nearby {counts.others > 0 && `(${counts.others})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("mine")}
+            className={`relative rounded-xl px-4 py-2 text-sm font-bold transition-all ${
+              activeTab === "mine"
+                ? "bg-stone-900 text-white shadow-sm"
+                : "text-stone-500 hover:text-stone-800"
+            }`}
+          >
+            Yours {counts.mine > 0 && `(${counts.mine})`}
+            {totalPendingRequests > 0 && activeTab !== "mine" && (
+              <span
+                className="absolute -right-1 -top-1 size-2.5 rounded-full bg-coral ring-2 ring-white"
+                aria-hidden
+              />
+            )}
+          </button>
         </div>
+
+        <FeedFilterBar
+          search={searchQuery}
+          onSearchChange={setSearchQuery}
+          categoryChip={categoryChip}
+          onCategoryChip={setCategoryChip}
+          chips={CATEGORY_CHIPS.map((c) => ({ id: c.id, label: c.label }))}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+          whenFilter={whenFilter}
+          onWhenFilter={setWhenFilter}
+          counts={{ upcoming: counts.upcoming, past: counts.past }}
+          geoStatus={geoStatus}
+        />
 
         {activeTab === "mine" && totalPendingRequests > 0 && (
           <button
@@ -907,71 +975,6 @@ function FeedPageContent() {
             <span className="text-sm font-bold text-coral">Review →</span>
           </button>
         )}
-
-        <div>
-          <h2 className="text-sm font-extrabold text-stone-800">Category</h2>
-        </div>
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
-          {CATEGORY_CHIPS.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => setCategoryChip(chip.id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                categoryChip === chip.id
-                  ? "bg-stone-900 text-white shadow-md"
-                  : "bg-white text-stone-600 ring-1 ring-stone-200 hover:ring-coral-100 hover:text-coral"
-              }`}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-
-       
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              {
-                id: "upcoming" as const,
-                label: "Upcoming",
-                n: counts.upcoming,
-              },
-              { id: "past" as const, label: "Past", n: counts.past },
-              {
-                id: "all" as const,
-                label: "All",
-                n: counts.upcoming + counts.past,
-              },
-            ] as const
-          ).map(({ id, label, n }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setWhenFilter(id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                whenFilter === id
-                  ? "bg-coral text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-              }`}
-            >
-              {label} · {n}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl  px-3 py-2.5 ">
-          <NearYouChip status={geoStatus} />
-          {/* <p className="text-xs text-stone-500">
-            {geoStatus === "success" &&
-            activeTab === "others" &&
-            whenFilter !== "past"
-              ? "Sorted closest first"
-              : viewMode === "map"
-                ? "Map: upcoming with a pin only"
-                : `${counts.showing} showing`}
-          </p> */}
-        </div>
 
         {categorySlug ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-coral-50 px-3 py-2 text-sm">
@@ -1028,19 +1031,10 @@ function FeedPageContent() {
             </button>
           </div>
         ) : (
-          <div className="space-y-8">
-            <div className="flex items-end justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-extrabold text-navy">Activities</h2>
-                <p className="text-sm text-stone-600">
-                  Tap <span className="font-semibold">I&apos;m in</span> to
-                  request a spot
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {visibleList.map((activity) => {
-                const upcoming = isUpcoming(activity.activity_date);
+                const upcoming = isUpcoming(activity);
                 const km = activityDistanceKm(activity, userLocation);
                 const distanceLabel = km != null ? formatDistance(km) : null;
 
@@ -1062,6 +1056,12 @@ function FeedPageContent() {
                     }
                     onRequests={() => openRequestsModal(activity.id)}
                     onEdit={() => router.push(`/activity/${activity.id}`)}
+                    onOpenDetails={() => setDetailActivity(activity)}
+                    onDelete={
+                      activeTab === "mine" && user?.id === activity.user_id
+                        ? () => void openDeleteConfirm(activity)
+                        : undefined
+                    }
                     onOpenChat={
                       myJoinByActivity[activity.id]?.status === "accepted"
                         ? async () => {
@@ -1135,9 +1135,101 @@ function FeedPageContent() {
                 </button>
               ) : null}
             </div>
-          </div>
+          </>
         )}
       </div>
+
+      {toast ? (
+        <p
+          className="fixed bottom-6 left-1/2 z-[110] -translate-x-1/2 rounded-full bg-navy px-4 py-2 text-sm font-medium text-white shadow-lg"
+          role="status"
+        >
+          {toast}
+        </p>
+      ) : null}
+
+      <ActivityDetailModal
+        open={detailActivity != null}
+        onClose={() => setDetailActivity(null)}
+        activity={detailActivity}
+        upcoming={detailActivity ? isUpcoming(detailActivity) : false}
+        spotsLeft={detailActivity?.max_people ?? 0}
+        distanceLabel={
+          detailActivity
+            ? (() => {
+                const km = activityDistanceKm(detailActivity, userLocation);
+                return km != null ? formatDistance(km) : null;
+              })()
+            : null
+        }
+        joinStatus={
+          detailActivity
+            ? (myJoinByActivity[detailActivity.id]?.status ?? "none")
+            : "none"
+        }
+        isHost={
+          detailActivity != null && user?.id === detailActivity.user_id
+        }
+        onJoin={() => {
+          if (!detailActivity) return;
+          setDetailActivity(null);
+          openRequestModal(detailActivity);
+        }}
+        onOpenChat={async () => {
+          if (!detailActivity || !user) return;
+          const join = myJoinByActivity[detailActivity.id];
+          const { conversationId } = await openChatForAcceptedJoin(
+            detailActivity.id,
+            user.id,
+            join?.requestId,
+          );
+          if (conversationId) {
+            setDetailActivity(null);
+            openChatModal(conversationId);
+          }
+        }}
+        onHostClick={() => {
+          if (!detailActivity) return;
+          setDetailActivity(null);
+          router.push(`/profile?userId=${detailActivity.user_id}`);
+        }}
+        onEdit={() => {
+          if (detailActivity) router.push(`/activity/${detailActivity.id}`);
+        }}
+        onDelete={() => {
+          if (detailActivity) void openDeleteConfirm(detailActivity);
+        }}
+      />
+
+      <AppModal
+        open={deleteTarget != null}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete this activity?"
+        subtitle={`${deleteCounts.pending} pending and ${deleteCounts.accepted} accepted guests will be removed.`}
+        footer={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-sm font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmDeleteActivity()}
+              disabled={deleting}
+              className="flex-1 rounded-full bg-red-600 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-stone-600">
+          This cannot be undone. Chats tied to this plan will be removed.
+        </p>
+      </AppModal>
 
       <AppModal
         open={showModal && !!selectedActivity}
@@ -1210,17 +1302,30 @@ function FeedPageContent() {
             No pending requests
           </p>
         ) : (
-          <div className="space-y-3">
-            {visibleHostRequests.map((request) => (
+          <div className="space-y-4">
+            {Object.entries(
+              visibleHostRequests.reduce<
+                Record<string, JoinRequest[]>
+              >((acc, r) => {
+                const key = r.activity_id;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(r);
+                return acc;
+              }, {}),
+            ).map(([activityId, group]) => (
+              <div
+                key={activityId}
+                className="overflow-hidden rounded-2xl border border-black/10 bg-white"
+              >
+                <p className="border-b border-black/5 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                  {group[0]?.activity?.title ?? "Plan"}
+                </p>
+                <div className="space-y-3 p-3">
+            {group.map((request) => (
               <div
                 key={request.id}
-                className="rounded-2xl border border-stone-200/80 bg-stone-50 p-4"
+                className="rounded-xl border border-black/5 bg-stone-50/80 p-4"
               >
-                {request.activity?.title && (
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-coral">
-                    {request.activity.title}
-                  </p>
-                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1262,23 +1367,32 @@ function FeedPageContent() {
                 <p className="mt-1 text-sm leading-relaxed text-stone-800">
                   {request.message}
                 </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleRequest(request.id, "accepted")}
-                    disabled={processingRequest === request.id}
-                    className="flex-1 rounded-full bg-coral py-2.5 text-sm font-bold text-white disabled:opacity-60"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRequest(request.id, "rejected")}
-                    disabled={processingRequest === request.id}
-                    className="flex-1 rounded-full border border-stone-200 py-2.5 text-sm font-semibold text-stone-600 disabled:opacity-60"
-                  >
-                    Reject
-                  </button>
+                {request.status === "cancelled" ? (
+                  <p className="mt-3 rounded-full bg-stone-100 py-2.5 text-center text-sm font-semibold text-stone-600">
+                    Cancelled: activity ended
+                  </p>
+                ) : (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleRequest(request.id, "accepted")}
+                      disabled={processingRequest === request.id}
+                      className="flex-1 rounded-full bg-coral py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRequest(request.id, "rejected")}
+                      disabled={processingRequest === request.id}
+                      className="flex-1 rounded-full border border-stone-200 py-2.5 text-sm font-semibold text-stone-600 disabled:opacity-60"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
                 </div>
               </div>
             ))}
